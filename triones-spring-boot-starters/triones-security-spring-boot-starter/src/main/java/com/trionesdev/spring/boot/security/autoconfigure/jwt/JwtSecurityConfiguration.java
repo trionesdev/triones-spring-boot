@@ -1,15 +1,19 @@
 package com.trionesdev.spring.boot.security.autoconfigure.jwt;
 
 import com.google.common.collect.Lists;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
+import com.trionesdev.commons.core.jwt.JwtTokenFacade;
 import com.trionesdev.spring.boot.security.autoconfigure.SecurityProperties;
 import com.trionesdev.commons.context.actor.ActorContext;
 import com.trionesdev.commons.core.jwt.JwtConfig;
 import com.trionesdev.commons.core.jwt.JwtFacade;
-import com.trionesdev.spring.security.jwt.JwtAuthenticationEntryPoint;
-import com.trionesdev.spring.security.jwt.JwtAuthenticationFilter;
-import com.trionesdev.spring.security.jwt.JwtServerConfigurer;
-import com.trionesdev.spring.security.jwt.JwtTokenConfig;
+import com.trionesdev.spring.security.ActorAuthoritiesResolver;
+import com.trionesdev.spring.security.jwt.*;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -20,7 +24,9 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.UUID;
 
 @RequiredArgsConstructor
 @Configuration
@@ -32,26 +38,32 @@ public class JwtSecurityConfiguration {
     private final ActorContext actorContext;
     private final SecurityProperties securityProperties;
     private final JwtSecurityProperties jwtSecurityProperties;
+    private final ObjectProvider<JwtActorResolver> jwtActorResolverProvider;
+    private final ObjectProvider<ActorAuthoritiesResolver> authoritiesResolverObjectProvider;
 
     private final String[] ignoreMatchers = {"/favicon.ico", "/v3/api-docs/**", "/v2/api-docs", "/webjars/**", "/swagger-resources/**",
             "/swagger-ui/**", "/swagger-ui.html", "/actuator/**", "/websocket/**"};
 
     @Bean
-    public JwtFacade jwtFacade() {
-        return new JwtFacade(JwtConfig.builder().secret(jwtSecurityProperties.getSecret()).expiration(jwtSecurityProperties.getExpiration()).build());
+    public JwtTokenFacade jwtTokenFacade() throws JOSEException {
+        String keyId = StringUtils.isBlank(jwtSecurityProperties.getSecret()) ? UUID.randomUUID().toString() : jwtSecurityProperties.getSecret();
+        RSAKey signingKey = new RSAKeyGenerator(2048).keyID(keyId).generate();
+        return new JwtTokenFacade(signingKey, Duration.ofSeconds(jwtSecurityProperties.getExpiration()));
     }
 
 
     @Bean
-    public SecurityFilterChain securityWebFilterChain(HttpSecurity http, JwtFacade jwtFacade) throws Exception {
+    public SecurityFilterChain securityWebFilterChain(HttpSecurity http, JwtTokenFacade jwtFacade) throws Exception {
         JwtTokenConfig jwtTokenConfig = JwtTokenConfig.builder()
                 .remote(jwtSecurityProperties.getRemote())
-                .endpoint(jwtSecurityProperties.getEndpoint())
+
                 .secret(jwtSecurityProperties.getSecret())
                 .expiration(jwtSecurityProperties.getExpiration())
                 .build();
 
-        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtTokenConfig, jwtFacade, actorContext);
+        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtTokenConfig, jwtFacade, actorContext,
+                jwtActorResolverProvider.getIfAvailable(),
+                authoritiesResolverObjectProvider.getIfAvailable());
         JwtServerConfigurer<HttpSecurity> jwtServerConfigurer = new JwtServerConfigurer<>(applicationContext, jwtAuthenticationFilter);
 
         List<String> ignoreMatcherList = Lists.newArrayList(ignoreMatchers);

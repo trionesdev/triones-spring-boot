@@ -6,7 +6,7 @@
     <groupId>com.trionesdev.springboot</groupId>
     <artifactId>triones-spring-boot</artifactId>
     <packaging>pom</packaging>
-    <version>3.0.2-SNAPSHOT</version>
+    <version>3.0.3-SNAPSHOT</version>
     <name>Triones:SpringBoot</name>
     <modules>
         <module>triones-spring-boot-dependencies</module>

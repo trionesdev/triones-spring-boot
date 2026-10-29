@@ -14,7 +14,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class JwtSecurityProperties {
     private Boolean enabled;
     private Boolean remote = false;
-    private String endpoint;
+    private String issuerUri;
     private String secret = "secret1234567890qwertyuiopasdfghg";
     private int expiration;
 }
