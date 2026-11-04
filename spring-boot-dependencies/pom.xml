@@ -3,12 +3,12 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>triones-spring-boot</artifactId>
+        <artifactId>spring-boot</artifactId>
         <groupId>com.trionesdev.springboot</groupId>
         <version>3.0.3-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>triones-spring-boot-dependencies</artifactId>
+    <artifactId>spring-boot-dependencies</artifactId>
     <name>Triones:SpringBoot:Dependencies</name>
 
     <properties>
@@ -65,27 +65,27 @@
 
             <dependency>
                 <groupId>com.trionesdev.springboot</groupId>
-                <artifactId>triones-spring-boot-starter</artifactId>
+                <artifactId>spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.trionesdev.springboot</groupId>
-                <artifactId>triones-security-spring-boot-starter</artifactId>
+                <artifactId>security-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.trionesdev.springboot</groupId>
-                <artifactId>triones-openfeign-spring-boot-starter</artifactId>
+                <artifactId>openfeign-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.trionesdev.springboot</groupId>
-                <artifactId>triones-mybatis-plus-spring-boot-starter</artifactId>
+                <artifactId>mybatis-plus-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.trionesdev.springboot</groupId>
-                <artifactId>triones-opentelemetry-spring-boot-starter</artifactId>
+                <artifactId>opentelemetry-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

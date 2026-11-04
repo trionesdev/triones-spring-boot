@@ -1,15 +1,14 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.trionesdev.springboot</groupId>
-        <artifactId>triones-spring-boot-starters</artifactId>
+        <artifactId>starters</artifactId>
         <version>3.0.3-SNAPSHOT</version>
     </parent>
-    <modelVersion>4.0.0</modelVersion>
-    <name>Triones:SpringBoot:Security</name>
-    <artifactId>triones-security-spring-boot-starter</artifactId>
+    <artifactId>openfeign-spring-boot-starter</artifactId>
+    <name>Triones:SpringBoot:Openfeign</name>
+    <url>http://maven.apache.org</url>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -35,24 +34,24 @@
             <optional>true</optional>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-security</artifactId>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.trionesdev.commons</groupId>
-            <artifactId>spring-security</artifactId>
+            <artifactId>commons-feign</artifactId>
             <exclusions>
                 <exclusion>
-                    <groupId>org.springframework.security</groupId>
-                    <artifactId>spring-security-config</artifactId>
+                    <groupId>io.github.openfeign</groupId>
+                    <artifactId>feign-core</artifactId>
                 </exclusion>
                 <exclusion>
-                    <groupId>org.springframework.security</groupId>
-                    <artifactId>spring-security-core</artifactId>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
-
     </dependencies>
 
 </project>

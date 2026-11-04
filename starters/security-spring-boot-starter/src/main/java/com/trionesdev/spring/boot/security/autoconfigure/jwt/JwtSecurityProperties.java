@@ -12,9 +12,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @NoArgsConstructor
 @ConfigurationProperties("triones.security.jwt")
 public class JwtSecurityProperties {
-    private Boolean enabled;
-    private Boolean remote = false;
-    private String issuerUri;
     private String secret = "secret1234567890qwertyuiopasdfghg";
     private int expiration = 30 * 60;
 }

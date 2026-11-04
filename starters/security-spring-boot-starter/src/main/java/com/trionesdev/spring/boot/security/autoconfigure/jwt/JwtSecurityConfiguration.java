@@ -10,6 +10,7 @@ import com.trionesdev.commons.context.actor.ActorContext;
 import com.trionesdev.commons.core.jwt.JwtConfig;
 import com.trionesdev.commons.core.jwt.JwtFacade;
 import com.trionesdev.spring.security.ActorAuthoritiesResolver;
+import com.trionesdev.spring.security.ResourceServerConfig;
 import com.trionesdev.spring.security.jwt.*;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
@@ -54,14 +55,14 @@ public class JwtSecurityConfiguration {
 
     @Bean
     public SecurityFilterChain securityWebFilterChain(HttpSecurity http, JwtTokenFacade jwtFacade) throws Exception {
-        JwtTokenConfig jwtTokenConfig = JwtTokenConfig.builder()
-                .remote(jwtSecurityProperties.getRemote())
-
-                .secret(jwtSecurityProperties.getSecret())
-                .expiration(jwtSecurityProperties.getExpiration())
+        SecurityProperties.ResourceServer.Jwt jwtProps = securityProperties.getResourceServer().getJwt();
+        ResourceServerConfig.Jwt jwtConfig = ResourceServerConfig.Jwt.builder().issuerUri(jwtProps.getIssuerUri())
+                .jwkSetUri(jwtProps.getJwkSetUri()).tokenUri(jwtProps.getTokenUri())
                 .build();
-
-        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtTokenConfig, jwtFacade, actorContext,
+        ResourceServerConfig resourceServerConfig =  ResourceServerConfig.builder()
+                .enabled(securityProperties.getResourceServer().getEnabled())
+                .jwt(jwtConfig).build();
+        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(resourceServerConfig, jwtFacade, actorContext,
                 jwtActorResolverProvider.getIfAvailable(),
                 authoritiesResolverObjectProvider.getIfAvailable());
         JwtServerConfigurer<HttpSecurity> jwtServerConfigurer = new JwtServerConfigurer<>(applicationContext, jwtAuthenticationFilter);

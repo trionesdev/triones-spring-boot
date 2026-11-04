@@ -6,18 +6,18 @@
     <packaging>pom</packaging>
     <parent>
         <groupId>com.trionesdev.springboot</groupId>
-        <artifactId>triones-spring-boot</artifactId>
+        <artifactId>spring-boot</artifactId>
         <version>3.0.3-SNAPSHOT</version>
     </parent>
 
-    <artifactId>triones-spring-boot-starters</artifactId>
+    <artifactId>starters</artifactId>
     <name>Triones:SpringBoot:Starter</name>
     <modules>
-        <module>triones-spring-boot-starter</module>
-        <module>triones-mybatis-plus-spring-boot-starter</module>
-        <module>triones-security-spring-boot-starter</module>
-        <module>triones-openfeign-spring-boot-starter</module>
-        <module>triones-opentelemetry-spring-boot-starter</module>
+        <module>spring-boot-starter</module>
+        <module>mybatis-plus-spring-boot-starter</module>
+        <module>security-spring-boot-starter</module>
+        <module>openfeign-spring-boot-starter</module>
+        <module>opentelemetry-spring-boot-starter</module>
     </modules>
 
     <properties>
@@ -30,7 +30,7 @@
         <dependencies>
             <dependency>
                 <groupId>com.trionesdev.springboot</groupId>
-                <artifactId>triones-spring-boot-dependencies</artifactId>
+                <artifactId>spring-boot-dependencies</artifactId>
                 <version>${project.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
