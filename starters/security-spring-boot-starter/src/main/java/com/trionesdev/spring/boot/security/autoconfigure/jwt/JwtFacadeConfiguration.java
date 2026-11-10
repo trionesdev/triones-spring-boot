@@ -18,14 +18,12 @@ public class JwtFacadeConfiguration {
     @Bean
     @ConditionalOnMissingBean(JwtFacade.class)
     public JwtFacade jwtFacade(JwtSecurityProperties properties) {
-        JWSAlgorithm algorithm = properties.getAlgorithm();
+        if (properties.getAlgorithm() == null) {
+            throw new IllegalArgumentException("triones.security.jwt.algorithm is required");
+        }
+        JWSAlgorithm algorithm = properties.getAlgorithm().toJwsAlgorithm();
         if (properties.getExpiration() <= 0) {
             throw new IllegalArgumentException("triones.security.jwt.expiration must be positive");
-        }
-        if (algorithm == null || !(JWSAlgorithm.Family.RSA.contains(algorithm)
-                || JWSAlgorithm.ES256.equals(algorithm) || JWSAlgorithm.ES384.equals(algorithm)
-                || JWSAlgorithm.ES512.equals(algorithm) || JWSAlgorithm.Family.HMAC_SHA.contains(algorithm))) {
-            throw new IllegalArgumentException("Unsupported JWT algorithm: " + algorithm);
         }
         if (JWSAlgorithm.Family.HMAC_SHA.contains(algorithm)) {
             int bytes = JWSAlgorithm.HS256.equals(algorithm) ? 32

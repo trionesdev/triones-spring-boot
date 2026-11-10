@@ -78,7 +78,16 @@ triones:
 
 **固定密钥与多实例部署**：RSA/EC 默认生成临时密钥，需要通过底层 `JwtFacade` 的 JWK 构造参数传入持久化密钥。HMAC 根据 `secret` 创建密钥；各实例应使用相同算法和相同 secret。
 
-算法族由 `algorithm` 自动推导，不需要配置 `family`。`algorithm` 的类型是 Nimbus 的对象类型；通过 YAML 配置时，需确认应用的 Spring 配置绑定支持这些类型。Java 默认值不等同于可直接绑定的 YAML 字符串。
+算法族由 `algorithm` 自动推导，不需要配置 `family`。`algorithm` 使用 `Algorithm` 枚举，支持 YAML 绑定及 IDE 配置候选值提示：`HS256`、`HS384`、`HS512`、`RS256`、`RS384`、`RS512`、`PS256`、`PS384`、`PS512`、`ES256`、`ES384`、`ES512`。
+
+```yaml
+triones:
+  security:
+    jwt:
+      algorithm: HS256
+      secret: ${JWT_SECRET}
+      expiration: 1800
+```
 
 ### 资源服务器（前缀 `triones.security.resource-server`）
 
