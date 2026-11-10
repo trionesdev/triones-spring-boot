@@ -1,11 +1,9 @@
 package com.trionesdev.spring.boot.security.autoconfigure.jwt;
 
 import com.google.common.collect.Lists;
-import com.nimbusds.jose.JOSEException;
 import com.trionesdev.commons.context.actor.ActorContext;
 import com.trionesdev.commons.core.jwt.JwtConfig;
 import com.trionesdev.commons.core.jwt.JwtFacade;
-import com.trionesdev.commons.core.jwt.JwtTokenFacade;
 import com.trionesdev.spring.boot.security.autoconfigure.SecurityProperties;
 import com.trionesdev.spring.security.ActorAuthoritiesResolver;
 import com.trionesdev.spring.security.ResourceServerConfig;
@@ -25,7 +23,6 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 
-import java.time.Duration;
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -45,8 +42,11 @@ public class JwtSecurityConfiguration {
             "/swagger-ui/**", "/swagger-ui.html", "/actuator/**", "/websocket/**"};
 
     @Bean
-    public JwtFacade jwtTokenFacade() {
+    public JwtFacade jwtFacade() {
         JwtConfig config = JwtConfig.builder()
+                .family(jwtSecurityProperties.getFamily())
+                .algorithm(jwtSecurityProperties.getAlgorithm())
+                .secret(jwtSecurityProperties.getSecret())
                 .expiration(jwtSecurityProperties.getExpiration())
                 .build();
         return new JwtFacade(config);

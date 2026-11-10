@@ -34,7 +34,7 @@ triones:
 ## 默认行为
 
 - 自动注册 `SecurityConfiguration` 和 `JwtSecurityConfiguration`，启用 Web Security。
-- 创建 `JwtTokenFacade` 和名为 `securityWebFilterChain` 的 `SecurityFilterChain`，安装 `JwtAuthenticationFilter`。
+- 创建 `JwtFacade` 和名为 `securityWebFilterChain` 的 `SecurityFilterChain`，安装 `JwtAuthenticationFilter`。
 - 使用 `STATELESS` 会话策略，关闭 CSRF 和匿名认证。
 - 放行匹配配置的请求，其余请求要求 `authenticated()`；认证入口使用 `JwtAuthenticationEntryPoint`。
 
@@ -73,16 +73,22 @@ triones:
 
 | 配置项 | 默认值 | 说明 |
 | --- | --- | --- |
-| `secret` | `secret1234567890qwertyuiopasdfghg` | 当前实现用于 RSA JWK 的 `keyID`，并非签名密钥材料；为空时生成随机 UUID |
+| `family` | `JWSAlgorithm.Family.RSA` | 签名算法族，传入底层 `JwtConfig` |
+| `algorithm` | `RS256` | 签名算法，传入底层 `JwtConfig` |
+| `secret` | `secret1234567890qwertyuiopasdfghg` | 已声明，但当前自动配置未将其传入 `JwtConfig`，设置此项不会配置签名密钥 |
 | `expiration` | `1800` | 令牌有效期，单位为秒 |
 
-当前实现每次创建 `JwtTokenFacade` 都会生成新的 2048 位 RSA 密钥。设置相同的 `secret` 不会复用同一密钥，因此不能据此实现跨实例验签或保证重启前签发的令牌继续有效。需要这些能力时，应调整密钥管理方案。
+当前 `jwtFacade()` 将 `family`、`algorithm` 和 `expiration` 交给 `JwtConfig`，再创建 `JwtFacade`。密钥生成、加载和验签的具体行为由底层 JWT 组件决定，本 starter 没有显式配置密钥。
+
+**固定密钥与多实例部署**：不能仅通过设置 `secret` 保证重启后或跨实例验签。需要先在 JWT 组件中配置持久化 RSA 密钥，或接入共享 HMAC 密钥，并将对应配置传入 `JwtConfig`。当前自动配置尚未接通 `secret`，因此这里不提供可直接启用 HS256 的配置示例。
+
+`family` 和 `algorithm` 的类型是 Nimbus 的对象类型；通过 YAML 配置时，需确认应用的 Spring 配置绑定支持这些类型。Java 默认值不等同于可直接绑定的 YAML 字符串。
 
 ### 资源服务器（前缀 `triones.security.resource-server`）
 
 | 配置项 | 默认值 | 说明 |
 | --- | --- | --- |
-| `enabled` | `false` | 已定义的属性；当前自动配置未读取此值，不能作为启停开关 |
+| `enabled` | `false` | 传入底层 `ResourceServerConfig`，控制行为由认证过滤器实现；不控制安全链 Bean 的创建 |
 | `jwt.issuer-uri` | 未设置 | 传入底层 JWT 配置的签发者 URI |
 | `jwt.token-uri` | 未设置 | 传入底层 JWT 配置的令牌 URI |
 | `jwt.jwk-set-uri` | 未设置 | 传入底层 JWT 配置的 JWK 集合 URI |
@@ -99,13 +105,14 @@ triones:
 triones:
   security:
     resource-server:
+      enabled: true
       jwt:
         issuer-uri: http://localhost:9000
         token-uri: http://localhost:9000/oauth2/token
         jwk-set-uri: http://localhost:9000/oauth2/jwks
 ```
 
-以上为授权服务器使用默认路径时的配置示例，本 starter 不会自动填充这些地址。若验证服务采用 OAuth2 令牌内省协议，其默认端点为 `http://localhost:9000/oauth2/introspect`；将其用于 `verification-uri` 前，需确认底层验证实现支持该协议及客户端认证要求。
+以上为授权服务器使用默认路径时的配置示例，本 starter 不会自动填充这些地址。实际地址应以认证服务的配置为准。
 
 这些 URI 会封装为 `ResourceServerConfig` 交给 `JwtAuthenticationFilter`，具体处理逻辑由依赖 `com.trionesdev.commons:spring-security` 实现，应按所接入的认证服务配置。
 
@@ -124,5 +131,5 @@ triones:
 
 - **缺少 `ActorContext` Bean**：检查上下文组件是否已注册到 Spring 容器。
 - **公开接口仍要求认证**：检查路径及 HTTP 方法是否匹配；例如 `exclude-get-matchers` 不会放行 POST 请求。
-- **重启或多实例部署后令牌无法验证**：检查是否受每次启动生成独立 RSA 密钥的行为影响。
-- **设置 `resource-server.enabled: false` 后仍启用安全链**：当前实现没有使用该属性控制自动配置。
+- **重启或多实例部署后令牌无法验证**：检查底层 JWT 组件是否加载了相同的持久化密钥；当前 `secret` 属性未接入密钥配置。
+- **设置 `resource-server.enabled: false` 后仍启用安全链**：该属性会传入认证过滤器，但不会关闭 Spring Security 或阻止安全链创建。
