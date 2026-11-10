@@ -13,8 +13,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @NoArgsConstructor
 @ConfigurationProperties("triones.security.jwt")
 public class JwtSecurityProperties {
-    private JWSAlgorithm.Family family = JWSAlgorithm.Family.RSA; // 签名算法族
     private JWSAlgorithm algorithm = JWSAlgorithm.RS256; // 签名算法
-    private String secret = "secret1234567890qwertyuiopasdfghg";
+    private String secret;
     private int expiration = 30 * 60;
 }

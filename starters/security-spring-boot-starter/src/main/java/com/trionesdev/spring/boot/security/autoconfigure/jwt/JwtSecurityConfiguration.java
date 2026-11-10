@@ -1,9 +1,11 @@
 package com.trionesdev.spring.boot.security.autoconfigure.jwt;
 
-import com.google.common.collect.Lists;
+import java.util.ArrayList;
+import java.util.Arrays;
 import com.trionesdev.commons.context.actor.ActorContext;
 import com.trionesdev.commons.core.jwt.JwtConfig;
 import com.trionesdev.commons.core.jwt.JwtFacade;
+import com.trionesdev.spring.boot.security.autoconfigure.SecurityConfiguration;
 import com.trionesdev.spring.boot.security.autoconfigure.SecurityProperties;
 import com.trionesdev.spring.security.ActorAuthoritiesResolver;
 import com.trionesdev.spring.security.ResourceServerConfig;
@@ -16,8 +18,10 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.*;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -26,35 +30,21 @@ import org.springframework.security.web.SecurityFilterChain;
 import java.util.List;
 
 @RequiredArgsConstructor
-@Configuration
+@AutoConfiguration(after = {SecurityConfiguration.class, JwtFacadeConfiguration.class})
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+@ConditionalOnClass({HttpSecurity.class, JwtAuthenticationFilter.class})
 @EnableConfigurationProperties(value = {
         JwtSecurityProperties.class
 })
 public class JwtSecurityConfiguration {
     private final ApplicationContext applicationContext;
-    private final ActorContext actorContext;
     private final SecurityProperties securityProperties;
-    private final JwtSecurityProperties jwtSecurityProperties;
     private final ObjectProvider<JwtActorResolver> jwtActorResolverProvider;
     private final ObjectProvider<ActorAuthoritiesResolver> authoritiesResolverObjectProvider;
 
-    private final String[] ignoreMatchers = {"/favicon.ico", "/v3/api-docs/**", "/v2/api-docs", "/webjars/**", "/swagger-resources/**",
-            "/swagger-ui/**", "/swagger-ui.html", "/actuator/**", "/websocket/**"};
-
     @Bean
-    public JwtFacade jwtFacade() {
-        JwtConfig config = JwtConfig.builder()
-                .family(jwtSecurityProperties.getFamily())
-                .algorithm(jwtSecurityProperties.getAlgorithm())
-                .secret(jwtSecurityProperties.getSecret())
-                .expiration(jwtSecurityProperties.getExpiration())
-                .build();
-        return new JwtFacade(config);
-    }
-
-
-    @Bean
-    public SecurityFilterChain securityWebFilterChain(HttpSecurity http, JwtFacade jwtFacade) throws Exception {
+    @ConditionalOnMissingBean(SecurityFilterChain.class)
+    public SecurityFilterChain securityWebFilterChain(HttpSecurity http, JwtFacade jwtFacade, ActorContext actorContext) throws Exception {
         SecurityProperties.ResourceServer.Jwt jwtProps = securityProperties.getResourceServer().getJwt();
         ResourceServerConfig.Jwt jwtConfig = ResourceServerConfig.Jwt.builder().issuerUri(jwtProps.getIssuerUri())
                 .jwkSetUri(jwtProps.getJwkSetUri()).tokenUri(jwtProps.getTokenUri())
@@ -67,14 +57,14 @@ public class JwtSecurityConfiguration {
                 authoritiesResolverObjectProvider.getIfAvailable());
         JwtServerConfigurer<HttpSecurity> jwtServerConfigurer = new JwtServerConfigurer<>(applicationContext, jwtAuthenticationFilter);
 
-        List<String> ignoreMatcherList = Lists.newArrayList(ignoreMatchers);
-        ignoreMatcherList.addAll(Lists.newArrayList(securityProperties.getIgnoreMatchers()));
+        List<String> ignoreMatcherList = new ArrayList<>(Arrays.asList(securityProperties.getDefaultMatchers()));
+        ignoreMatcherList.addAll(Arrays.asList(securityProperties.getIgnoreMatchers()));
 
         http.csrf(AbstractHttpConfigurer::disable)
                 .anonymous(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorizeRequests ->
                         authorizeRequests
-                                .requestMatchers(ignoreMatcherList.toArray(new String[ignoreMatcherList.size()])).permitAll()
+                                .requestMatchers(ignoreMatcherList.toArray(String[]::new)).permitAll()
                                 .requestMatchers(securityProperties.getExcludeMatchers()).permitAll()
                                 .requestMatchers(HttpMethod.GET, securityProperties.getExcludeGetMatchers()).permitAll()
                                 .requestMatchers(HttpMethod.POST, securityProperties.getExcludePostMatchers()).permitAll()
@@ -82,7 +72,7 @@ public class JwtSecurityConfiguration {
                                 .requestMatchers(HttpMethod.DELETE, securityProperties.getExcludeDeleteMatchers()).permitAll()
                                 .anyRequest().authenticated()
                 )
-                .with(jwtServerConfigurer, httpSecurityJwtServerConfigurer -> httpSecurityJwtServerConfigurer.configure(http))
+                .with(jwtServerConfigurer, Customizer.withDefaults())
                 .sessionManagement(sessionManagement -> sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exceptionHandling -> exceptionHandling.authenticationEntryPoint(new JwtAuthenticationEntryPoint()))
         ;

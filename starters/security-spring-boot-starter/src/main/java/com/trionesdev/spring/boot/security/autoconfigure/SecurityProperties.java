@@ -12,6 +12,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @AllArgsConstructor
 @ConfigurationProperties("triones.security")
 public class SecurityProperties {
+    private String[] defaultMatchers = {"/favicon.ico"};
     private String[] excludeMatchers = {};
     private String[] excludeGetMatchers = {};
     private String[] excludePostMatchers = {};

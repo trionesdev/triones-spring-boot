@@ -38,21 +38,17 @@ triones:
 - 使用 `STATELESS` 会话策略，关闭 CSRF 和匿名认证。
 - 放行匹配配置的请求，其余请求要求 `authenticated()`；认证入口使用 `JwtAuthenticationEntryPoint`。
 
-以下路径默认通过 `permitAll()` 放行：
+默认仅放行 `/favicon.ico`。Swagger、Actuator 和 WebSocket 路径需要应用显式配置。
 
-```text
-/favicon.ico
-/v3/api-docs/**
-/v2/api-docs
-/webjars/**
-/swagger-resources/**
-/swagger-ui/**
-/swagger-ui.html
-/actuator/**
-/websocket/**
+`default-matchers` 可替换默认列表，`ignore-matchers` 用于追加：
+
+```yaml
+triones:
+  security:
+    default-matchers: []
+    ignore-matchers:
+      - /api/public/**
 ```
-
-默认路径与 `ignore-matchers` 合并，配置不能移除内置放行项。部署前应确认 Actuator、Swagger 和 WebSocket 端点的访问范围。
 
 ## 配置项
 
@@ -65,7 +61,8 @@ triones:
 | `exclude-post-matchers` | `[]` | 仅 POST 请求放行的路径 |
 | `exclude-put-matchers` | `[]` | 仅 PUT 请求放行的路径 |
 | `exclude-delete-matchers` | `[]` | 仅 DELETE 请求放行的路径 |
-| `ignore-matchers` | `[]` | 追加到内置放行列表的路径 |
+| `default-matchers` | `["/favicon.ico"]` | 默认放行列表，配置后整体替换；设为空列表可移除默认项 |
+| `ignore-matchers` | `[]` | 追加到默认放行列表的路径 |
 
 这些配置均调用 `requestMatchers(...).permitAll()`，请求仍经过安全过滤器链。路径示例：`/api/public/**`。
 
@@ -73,16 +70,15 @@ triones:
 
 | 配置项 | 默认值 | 说明 |
 | --- | --- | --- |
-| `family` | `JWSAlgorithm.Family.RSA` | 签名算法族，传入底层 `JwtConfig` |
 | `algorithm` | `RS256` | 签名算法，传入底层 `JwtConfig` |
-| `secret` | `secret1234567890qwertyuiopasdfghg` | 已声明，但当前自动配置未将其传入 `JwtConfig`，设置此项不会配置签名密钥 |
+| `secret` | 未设置 | 传入底层 `JwtConfig`，具体密钥处理由 JWT 组件决定 |
 | `expiration` | `1800` | 令牌有效期，单位为秒 |
 
-当前 `jwtFacade()` 将 `family`、`algorithm` 和 `expiration` 交给 `JwtConfig`，再创建 `JwtFacade`。密钥生成、加载和验签的具体行为由底层 JWT 组件决定，本 starter 没有显式配置密钥。
+当前 `jwtFacade()` 将 `algorithm`、`secret` 和 `expiration` 交给 `JwtConfig`，再创建 `JwtFacade`。密钥生成、加载和验签的具体行为由底层 JWT 组件决定，本 starter 没有显式配置密钥。
 
-**固定密钥与多实例部署**：不能仅通过设置 `secret` 保证重启后或跨实例验签。需要先在 JWT 组件中配置持久化 RSA 密钥，或接入共享 HMAC 密钥，并将对应配置传入 `JwtConfig`。当前自动配置尚未接通 `secret`，因此这里不提供可直接启用 HS256 的配置示例。
+**固定密钥与多实例部署**：RSA/EC 默认生成临时密钥，需要通过底层 `JwtFacade` 的 JWK 构造参数传入持久化密钥。HMAC 根据 `secret` 创建密钥；各实例应使用相同算法和相同 secret。
 
-`family` 和 `algorithm` 的类型是 Nimbus 的对象类型；通过 YAML 配置时，需确认应用的 Spring 配置绑定支持这些类型。Java 默认值不等同于可直接绑定的 YAML 字符串。
+算法族由 `algorithm` 自动推导，不需要配置 `family`。`algorithm` 的类型是 Nimbus 的对象类型；通过 YAML 配置时，需确认应用的 Spring 配置绑定支持这些类型。Java 默认值不等同于可直接绑定的 YAML 字符串。
 
 ### 资源服务器（前缀 `triones.security.resource-server`）
 
@@ -125,11 +121,15 @@ triones:
 | `com.trionesdev.spring.security.jwt.JwtActorResolver` | 扩展 JWT 中的 Actor 解析 |
 | `com.trionesdev.spring.security.ActorAuthoritiesResolver` | 扩展 Actor 权限解析 |
 
-当前自动配置没有使用 `@ConditionalOnMissingBean` 进行默认 Bean 退让。需要完全自定义安全链或令牌组件时，应显式排除相关自动配置，并自行提供对应配置，避免 Bean 冲突或多个安全链匹配范围重叠。
+`JwtFacadeConfiguration` 独立创建 JWT 组件，不依赖 `ActorContext`，可用于非 Web 应用。应用提供 `JwtFacade` Bean 时默认实现退让。
+
+安全链仅在 Servlet Web 环境且相关类存在时配置；应用提供任意 `SecurityFilterChain` Bean 时，默认安全链退让。默认安全链需要应用提供 `ActorContext`。
+
+默认 JWT 配置在启动时检查算法和有效期。HMAC 必须显式提供 secret：HS256 为 32、HS384 为 48、HS512 为 64 个 UTF-8 字节。RSA/EC 的密钥兼容性由 `JwtFacade` 构造时检查。自定义 `JwtFacade` 时，配置校验由应用负责。
 
 ## 排查问题
 
 - **缺少 `ActorContext` Bean**：检查上下文组件是否已注册到 Spring 容器。
 - **公开接口仍要求认证**：检查路径及 HTTP 方法是否匹配；例如 `exclude-get-matchers` 不会放行 POST 请求。
-- **重启或多实例部署后令牌无法验证**：检查底层 JWT 组件是否加载了相同的持久化密钥；当前 `secret` 属性未接入密钥配置。
+- **重启或多实例部署后令牌无法验证**：检查底层 JWT 组件是否加载了相同的持久化密钥；RSA/EC 默认生成临时密钥，HMAC 则需保持算法和 secret 一致。
 - **设置 `resource-server.enabled: false` 后仍启用安全链**：该属性会传入认证过滤器，但不会关闭 Spring Security 或阻止安全链创建。
