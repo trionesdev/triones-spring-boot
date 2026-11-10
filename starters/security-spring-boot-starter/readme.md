@@ -125,7 +125,7 @@ triones:
 
 安全链仅在 Servlet Web 环境且相关类存在时配置；应用提供任意 `SecurityFilterChain` Bean 时，默认安全链退让。默认安全链需要应用提供 `ActorContext`。
 
-默认 JWT 配置在启动时检查算法和有效期。HMAC 必须显式提供 secret：HS256 为 32、HS384 为 48、HS512 为 64 个 UTF-8 字节。RSA/EC 的密钥兼容性由 `JwtFacade` 构造时检查。自定义 `JwtFacade` 时，配置校验由应用负责。
+默认 JWT 配置在启动时检查算法和有效期。HMAC 必须显式提供 secret：HS256 上限为 32、HS384 为 48、HS512 为 64 个 UTF-8 字节。不足时由底层 `JwtFacade` 在字节数组尾部补零（`0x00`，不是字符 `0`），超出时启动报错。RSA/EC 的密钥兼容性由 `JwtFacade` 构造时检查。自定义 `JwtFacade` 时，配置校验由应用负责。
 
 ## 排查问题
 

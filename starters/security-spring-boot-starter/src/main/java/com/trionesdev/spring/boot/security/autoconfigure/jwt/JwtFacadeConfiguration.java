@@ -30,10 +30,13 @@ public class JwtFacadeConfiguration {
         if (JWSAlgorithm.Family.HMAC_SHA.contains(algorithm)) {
             int bytes = JWSAlgorithm.HS256.equals(algorithm) ? 32
                     : JWSAlgorithm.HS384.equals(algorithm) ? 48 : 64;
-            if (properties.getSecret() == null
-                    || properties.getSecret().getBytes(StandardCharsets.UTF_8).length != bytes) {
-                throw new IllegalArgumentException(algorithm + " secret must contain exactly " + bytes + " UTF-8 bytes");
+            if (properties.getSecret() == null) {
+                throw new IllegalArgumentException(algorithm + " secret is required");
             }
+            if (properties.getSecret().getBytes(StandardCharsets.UTF_8).length > bytes) {
+                throw new IllegalArgumentException(algorithm + " secret must not exceed " + bytes + " UTF-8 bytes");
+            }
+            // JwtFacade pads shorter UTF-8 key bytes with trailing zero bytes.
         }
         return new JwtFacade(JwtConfig.builder()
                 .algorithm(algorithm).secret(properties.getSecret())
