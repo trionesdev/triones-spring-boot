@@ -47,7 +47,7 @@ public class JwtSecurityConfiguration {
     public SecurityFilterChain securityWebFilterChain(HttpSecurity http, JwtFacade jwtFacade, ActorContext actorContext) throws Exception {
         SecurityProperties.ResourceServer.Jwt jwtProps = securityProperties.getResourceServer().getJwt();
         ResourceServerConfig.Jwt jwtConfig = ResourceServerConfig.Jwt.builder().issuerUri(jwtProps.getIssuerUri())
-                .jwkSetUri(jwtProps.getJwkSetUri()).tokenUri(jwtProps.getTokenUri())
+                .jwkSetUri(jwtProps.getJwkSetUri())
                 .build();
         ResourceServerConfig resourceServerConfig = ResourceServerConfig.builder()
                 .enabled(securityProperties.getResourceServer().getEnabled())

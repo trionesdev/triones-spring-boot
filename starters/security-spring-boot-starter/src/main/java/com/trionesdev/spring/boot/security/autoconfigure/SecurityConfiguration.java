@@ -12,7 +12,8 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 @ConditionalOnClass(HttpSecurity.class)
 @EnableWebSecurity
 @EnableConfigurationProperties(value = {
-        SecurityProperties.class
+        SecurityProperties.class,
+        AuthClientProperties.class
 })
 public class SecurityConfiguration {
 }
