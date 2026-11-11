@@ -32,7 +32,6 @@ public class SecurityProperties {
         @Data
         public static class Jwt {
             private String issuerUri;
-            private String tokenUri;
             private String jwkSetUri;
         }
     }

@@ -73,10 +73,75 @@ triones:
 | `algorithm` | `RS256` | 签名算法，传入底层 `JwtConfig` |
 | `secret` | 未设置 | 传入底层 `JwtConfig`，具体密钥处理由 JWT 组件决定 |
 | `expiration` | `1800` | 令牌有效期，单位为秒 |
+| `key.key-id` | JWK thumbprint | JWT 头中的 `kid`；默认按密钥内容计算，同一密钥在所有实例上一致 |
+| `key.jwk-location` | 未设置 | 含私钥的 JWK JSON 文件（RSA / EC / oct） |
+| `key.private-key-location` | 未设置 | 未加密的 PKCS#8 PEM 私钥（`-----BEGIN PRIVATE KEY-----`） |
+| `key.public-key-location` | 未设置 | X.509 PEM 公钥（`-----BEGIN PUBLIC KEY-----`）；RSA 可省略（由私钥推导），EC 必填 |
+| `key.key-store.location` | 未设置 | keystore 文件 |
+| `key.key-store.type` | `PKCS12` | `PKCS12` 或 `JKS` |
+| `key.key-store.password` | 未设置 | keystore 密码 |
+| `key.key-store.alias` | 未设置 | 密钥别名；keystore 中只有一个私钥条目时可省略 |
+| `key.key-store.key-password` | 同 `password` | 私钥密码 |
 
-当前 `jwtFacade()` 将 `algorithm`、`secret` 和 `expiration` 交给 `JwtConfig`，再创建 `JwtFacade`。密钥生成、加载和验签的具体行为由底层 JWT 组件决定，本 starter 没有显式配置密钥。
+`*-location` 支持 Spring `Resource` 写法：`classpath:jwt/private.pem`、`file:/etc/app/jwt.p12`。
 
-**固定密钥与多实例部署**：RSA/EC 默认生成临时密钥，需要通过底层 `JwtFacade` 的 JWK 构造参数传入持久化密钥。HMAC 根据 `secret` 创建密钥；各实例应使用相同算法和相同 secret。
+**固定密钥与多实例部署**：RSA/EC 未配置 `key.*` 时，每次启动随机生成临时密钥（启动时输出 WARN），重启后旧 token 失效，多实例之间也无法互相验证。生产环境请配置持久化密钥，所有实例加载同一份。HMAC 根据 `secret` 创建密钥，各实例使用相同算法和相同 secret 即可。
+
+密钥来源 `jwk-location`、`private-key-location`、`key-store.location` 只能配置其中一个。启动时会校验：资源是否存在、PEM 格式、密钥类型与 `algorithm` 是否匹配（如 `ES256` 配了 RSA 私钥会启动失败）。HMAC 算法不接受 PEM / keystore，只能用 `secret` 或 oct 类型的 JWK。
+
+**方式一：PEM 私钥**
+
+```bash
+# 生成 RSA 私钥（PKCS#8）
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out jwt-private.pem
+# 已有 PKCS#1（BEGIN RSA PRIVATE KEY）私钥时转换为 PKCS#8
+openssl pkcs8 -topk8 -nocrypt -in rsa-key.pem -out jwt-private.pem
+
+# EC（ES256）需要同时提供公钥
+openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 -out jwt-ec-private.pem
+openssl pkey -in jwt-ec-private.pem -pubout -out jwt-ec-public.pem
+```
+
+```yaml
+triones:
+  security:
+    jwt:
+      algorithm: RS256
+      key:
+        private-key-location: file:/etc/app/jwt-private.pem
+```
+
+**方式二：keystore**
+
+```bash
+keytool -genkeypair -keyalg RSA -keysize 2048 -alias jwt -dname "CN=jwt" -validity 3650 \
+  -storetype PKCS12 -keystore jwt.p12 -storepass changeit
+```
+
+```yaml
+triones:
+  security:
+    jwt:
+      algorithm: RS256
+      key:
+        key-store:
+          location: file:/etc/app/jwt.p12
+          password: ${JWT_KEYSTORE_PASSWORD}
+          alias: jwt
+```
+
+**方式三：JWK 文件**
+
+```yaml
+triones:
+  security:
+    jwt:
+      algorithm: RS256
+      key:
+        jwk-location: file:/etc/app/jwt.jwk.json
+```
+
+> 私钥不要打包进 jar 或提交到代码仓库，建议通过挂载文件（K8s Secret、配置中心落盘）配合 `file:` 路径加载。轮换密钥时可设置新的 `key-id`，但当前 `JwtFacade` 只持有一把密钥，切换后用旧密钥签发的 token 会立即失效。
 
 算法族由 `algorithm` 自动推导，不需要配置 `family`。`algorithm` 使用 `Algorithm` 枚举，支持 YAML 绑定及 IDE 配置候选值提示：`HS256`、`HS384`、`HS512`、`RS256`、`RS384`、`RS512`、`PS256`、`PS384`、`PS512`、`ES256`、`ES384`、`ES512`。
 
@@ -140,5 +205,5 @@ triones:
 
 - **缺少 `ActorContext` Bean**：检查上下文组件是否已注册到 Spring 容器。
 - **公开接口仍要求认证**：检查路径及 HTTP 方法是否匹配；例如 `exclude-get-matchers` 不会放行 POST 请求。
-- **重启或多实例部署后令牌无法验证**：检查底层 JWT 组件是否加载了相同的持久化密钥；RSA/EC 默认生成临时密钥，HMAC 则需保持算法和 secret 一致。
+- **重启或多实例部署后令牌无法验证**：启动日志出现 `No persistent JWT signing key configured` 说明 RSA/EC 使用了临时密钥，请配置 `triones.security.jwt.key.*`；HMAC 则需保持算法和 secret 一致。
 - **设置 `resource-server.enabled: false` 后仍启用安全链**：该属性会传入认证过滤器，但不会关闭 Spring Security 或阻止安全链创建。
