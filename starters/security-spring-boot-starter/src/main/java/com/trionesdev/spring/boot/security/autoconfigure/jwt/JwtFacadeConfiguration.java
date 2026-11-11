@@ -12,6 +12,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 @Slf4j
 @AutoConfiguration
@@ -29,6 +30,11 @@ public class JwtFacadeConfiguration {
             throw new IllegalArgumentException("triones.security.jwt.expiration must be positive");
         }
         JWK signingKey = JwtSigningKeyLoader.load(properties.getKey(), algorithm);
+        List<JWK> verificationKeys = JwtSigningKeyLoader.loadVerificationKeys(properties.getKey(), algorithm);
+        if (!verificationKeys.isEmpty() && signingKey == null && !JWSAlgorithm.Family.HMAC_SHA.contains(algorithm)) {
+            throw new IllegalArgumentException("triones.security.jwt.key.verification-keys requires a persistent "
+                    + "signing key (triones.security.jwt.key.*)");
+        }
         if (JWSAlgorithm.Family.HMAC_SHA.contains(algorithm) && signingKey == null) {
             int bytes = JWSAlgorithm.HS256.equals(algorithm) ? 32
                     : JWSAlgorithm.HS384.equals(algorithm) ? 48 : 64;
@@ -48,6 +54,6 @@ public class JwtFacadeConfiguration {
         // 密钥类型与算法不匹配时由 JwtFacade 构造时报错
         return new JwtFacade(JwtConfig.builder()
                 .algorithm(algorithm).secret(properties.getSecret())
-                .expiration(properties.getExpiration()).build(), signingKey);
+                .expiration(properties.getExpiration()).build(), signingKey, verificationKeys);
     }
 }

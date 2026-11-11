@@ -3,11 +3,16 @@ package com.trionesdev.spring.boot.security.autoconfigure.jwt;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.core.io.Resource;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @SuperBuilder
@@ -26,17 +31,18 @@ public class JwtSecurityProperties {
     private SigningKey key = new SigningKey();
 
     /**
-     * 签名密钥来源，三选一：{@code jwk-location}、{@code private-key-location}、{@code key-store.location}。
+     * 密钥来源，三选一：{@code jwk-location}、{@code private-key-location}（或仅用于校验时的
+     * {@code public-key-location}）、{@code key-store.location}。
      */
     @Data
     @NoArgsConstructor
-    public static class SigningKey {
+    public static class KeySource {
         /**
          * 密钥 ID（JWT 头中的 kid）。未设置时使用 JWK thumbprint，多实例加载同一密钥时保持一致。
          */
         private String keyId;
         /**
-         * 包含私钥的 JWK JSON 文件，支持 RSA / EC / oct。
+         * JWK JSON 文件，支持 RSA / EC / oct。签名密钥必须包含私钥，验证密钥可只含公钥。
          */
         private Resource jwkLocation;
         /**
@@ -44,11 +50,26 @@ public class JwtSecurityProperties {
          */
         private Resource privateKeyLocation;
         /**
-         * X.509 PEM 公钥（-----BEGIN PUBLIC KEY-----）。RSA 可选（可由私钥推导），EC 必填。
+         * X.509 PEM 公钥（-----BEGIN PUBLIC KEY-----）。签名密钥：RSA 可选（可由私钥推导），EC 必填；
+         * 验证密钥：可单独配置。
          */
         private Resource publicKeyLocation;
         @NestedConfigurationProperty
         private KeyStoreProperties keyStore = new KeyStoreProperties();
+    }
+
+    /**
+     * 当前签名密钥 + 仅用于校验的旧密钥（密钥轮换）。
+     */
+    @Data
+    @EqualsAndHashCode(callSuper = true)
+    @ToString(callSuper = true)
+    @NoArgsConstructor
+    public static class SigningKey extends KeySource {
+        /**
+         * 仅用于校验的额外密钥，例如轮换前的旧密钥。旧 token 全部过期（≥ expiration）后可移除。
+         */
+        private List<KeySource> verificationKeys = new ArrayList<>();
     }
 
     @Data
@@ -64,7 +85,7 @@ public class JwtSecurityProperties {
         private String type = "PKCS12";
         private String password;
         /**
-         * 密钥别名；keystore 中只有一个私钥条目时可省略
+         * 密钥别名；keystore 中只有一个密钥（或证书）条目时可省略
          */
         private String alias;
         /**

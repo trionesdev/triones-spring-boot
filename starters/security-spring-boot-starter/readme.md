@@ -82,6 +82,7 @@ triones:
 | `key.key-store.password` | 未设置 | keystore 密码 |
 | `key.key-store.alias` | 未设置 | 密钥别名；keystore 中只有一个私钥条目时可省略 |
 | `key.key-store.key-password` | 同 `password` | 私钥密码 |
+| `key.verification-keys[n].*` | `[]` | 仅用于校验的旧密钥（密钥轮换），每项支持与上面相同的 `key-id`、`jwk-location`、`private-key-location`、`public-key-location`、`key-store.*`；RSA/EC 只需公钥 |
 
 `*-location` 支持 Spring `Resource` 写法：`classpath:jwt/private.pem`、`file:/etc/app/jwt.p12`。
 
@@ -141,7 +142,38 @@ triones:
         jwk-location: file:/etc/app/jwt.jwk.json
 ```
 
-> 私钥不要打包进 jar 或提交到代码仓库，建议通过挂载文件（K8s Secret、配置中心落盘）配合 `file:` 路径加载。轮换密钥时可设置新的 `key-id`，但当前 `JwtFacade` 只持有一把密钥，切换后用旧密钥签发的 token 会立即失效。
+> 私钥不要打包进 jar 或提交到代码仓库，建议通过挂载文件（K8s Secret、配置中心落盘）配合 `file:` 路径加载。
+
+#### 密钥轮换
+
+`JwtFacade` 始终只用 `key` 签发，`key.verification-keys` 中的密钥只用于校验。校验时按 JWT 头的 `kid` 选择密钥，`kid` 缺失或未命中时依次尝试所有已配置的密钥（签名必须能被其中之一验证通过，未配置的密钥签发的 token 一律拒绝）。
+
+```yaml
+triones:
+  security:
+    jwt:
+      algorithm: RS256
+      expiration: 1800
+      key:
+        private-key-location: file:/etc/app/jwt-2026.pem        # 新密钥：签发 + 校验
+        verification-keys:
+          - public-key-location: file:/etc/app/jwt-2025.pub.pem  # 旧密钥：只校验
+```
+
+多实例平滑轮换步骤：
+
+1. **预发布新公钥**：所有实例保持旧私钥签发，把新公钥加入 `verification-keys` 并滚动发布。此时任何实例都能校验新密钥签发的 token。
+2. **切换签名密钥**：`key` 换成新私钥，旧公钥移入 `verification-keys`，滚动发布。发布过程中新旧实例签发的 token 可互相校验。
+3. **移除旧密钥**：等待至少 `expiration` 秒（旧 token 全部过期）后，从 `verification-keys` 删除旧密钥。
+
+如果可以接受发布期间少量请求校验失败，可跳过第 1 步。
+
+注意事项：
+
+- `kid` 默认是 JWK thumbprint，同一把密钥在签发端和校验端算出的值一致，无需额外配置；若签发时设置了自定义 `key-id`，校验端也要配置相同的 `key-id`（或依赖 `kid` 未命中时的回退尝试）。
+- 配置了 `verification-keys` 时必须同时配置持久化签名密钥，否则启动失败。
+- `JwtFacade.getPublicJwkSet()` 返回签名公钥（第一个）和所有验证公钥，对外提供 JWKS 端点时，远程校验方在轮换期间也能同时认可新旧 token。
+- HMAC 轮换：`secret` 换成新值，旧密钥以 oct 类型 JWK 文件放入 `verification-keys[n].jwk-location`；HMAC 不对外暴露 JWKS。
 
 算法族由 `algorithm` 自动推导，不需要配置 `family`。`algorithm` 使用 `Algorithm` 枚举，支持 YAML 绑定及 IDE 配置候选值提示：`HS256`、`HS384`、`HS512`、`RS256`、`RS384`、`RS512`、`PS256`、`PS384`、`PS512`、`ES256`、`ES384`、`ES512`。
 
