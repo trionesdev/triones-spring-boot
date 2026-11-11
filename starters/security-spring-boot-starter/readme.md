@@ -82,6 +82,9 @@ triones:
 | `key.key-store.password` | 未设置 | keystore 密码 |
 | `key.key-store.alias` | 未设置 | 密钥别名；keystore 中只有一个私钥条目时可省略 |
 | `key.key-store.key-password` | 同 `password` | 私钥密码 |
+| `jwks.enabled` | `false` | 是否开启 JWKS 端点（仅 RSA/EC） |
+| `jwks.path` | `/auth/jwks` | JWKS 端点路径（Spring Authorization Server 默认为 `/oauth2/jwks`） |
+| `jwks.cache-max-age` | `5m` | 响应 `Cache-Control: public, max-age=…`；`0` 时返回 `no-store` |
 | `key.verification-keys[n].*` | `[]` | 仅用于校验的旧密钥（密钥轮换），每项支持与上面相同的 `key-id`、`jwk-location`、`private-key-location`、`public-key-location`、`key-store.*`；RSA/EC 只需公钥 |
 
 `*-location` 支持 Spring `Resource` 写法：`classpath:jwt/private.pem`、`file:/etc/app/jwt.p12`。
@@ -174,6 +177,60 @@ triones:
 - 配置了 `verification-keys` 时必须同时配置持久化签名密钥，否则启动失败。
 - `JwtFacade.getPublicJwkSet()` 返回签名公钥（第一个）和所有验证公钥，对外提供 JWKS 端点时，远程校验方在轮换期间也能同时认可新旧 token。
 - HMAC 轮换：`secret` 换成新值，旧密钥以 oct 类型 JWK 文件放入 `verification-keys[n].jwk-location`；HMAC 不对外暴露 JWKS。
+
+#### JWKS 端点
+
+签发 token 的服务开启 JWKS 端点后，其他服务无需持有任何密钥，配置 `resource-server.jwt.jwk-set-uri` 即可远程校验：
+
+```yaml
+# 签发方（登录服务）
+triones:
+  security:
+    jwt:
+      algorithm: RS256
+      key:
+        private-key-location: file:/etc/app/jwt-private.pem
+      jwks:
+        enabled: true
+        path: /auth/jwks
+        cache-max-age: 5m
+```
+
+```yaml
+# 校验方（其他服务）
+triones:
+  security:
+    resource-server:
+      enabled: true
+      jwt:
+        jwk-set-uri: http://auth-service/auth/jwks
+```
+
+```bash
+curl http://localhost:8080/auth/jwks
+# {"keys":[{"kty":"RSA","e":"AQAB","kid":"...","n":"..."}]}
+```
+
+- 响应为标准 JWK Set（RFC 7517），内容来自 `JwtFacade.getPublicJwkSet()`：签名公钥在前，随后是 `key.verification-keys` 的公钥，**不含任何私钥字段**。密钥轮换期间远程校验方可同时认可新旧 token。
+- 端点由 `JwksEndpointConfigurer` 挂在 **Spring Security 过滤器链内**（与 Spring Authorization Server 的 `NimbusJwkSetEndpointFilter` 做法一致），位于认证/授权过滤器之前并直接写出响应，因此**无需**加入 `exclude-*-matchers`。链中的安全响应头（如 `X-Content-Type-Options`）、CORS 配置照常生效；不依赖 Spring MVC。
+- `jwks.*` 配置只作用于 starter 默认安全链。应用自定义 `SecurityFilterChain` 时需手动接入 `com.trionesdev.spring.security.jwks.JwksEndpointConfigurer`（位于 `spring-security` 组件中，不依赖 starter 配置）。未传入时 `JwtFacade` 从容器获取，路径默认 `/auth/jwks`，缓存默认 5 分钟；要沿用 `triones.security.jwt.jwks.*` 配置，注入 `JwtSecurityProperties` 后传入：
+
+  ```java
+  @Bean
+  SecurityFilterChain securityFilterChain(HttpSecurity http, JwtSecurityProperties properties) throws Exception {
+      JwtSecurityProperties.Jwks jwks = properties.getJwks();
+      http.authorizeHttpRequests(a -> a.anyRequest().authenticated())
+          // 链式调用时需显式写出泛型参数 <HttpSecurity>
+          .with(new JwksEndpointConfigurer<HttpSecurity>()
+                  .path(jwks.getPath())
+                  .cacheMaxAge(jwks.getCacheMaxAge()), Customizer.withDefaults());
+      return http.build();
+  }
+  ```
+- 只响应 `GET` / `HEAD`，其他方法返回 `405`；路径基于 context-path 之后的部分匹配。
+- 密钥在启动时序列化一次，更换密钥需重启。远程校验方会缓存 JWKS（nimbus 默认缓存数分钟，并在遇到未知 `kid` 时刷新），因此轮换时建议先预发布新公钥（见上文步骤 1）。
+- HMAC 算法开启 `jwks.enabled` 会启动失败，对称密钥不能公开。
+- 未配置持久化密钥时端点也能工作，但每个实例返回不同的临时公钥，多实例下远程校验会随机失败，生产环境务必配置 `key.*`。
 
 算法族由 `algorithm` 自动推导，不需要配置 `family`。`algorithm` 使用 `Algorithm` 枚举，支持 YAML 绑定及 IDE 配置候选值提示：`HS256`、`HS384`、`HS512`、`RS256`、`RS384`、`RS512`、`PS256`、`PS384`、`PS512`、`ES256`、`ES384`、`ES512`。
 

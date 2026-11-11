@@ -11,6 +11,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.core.io.Resource;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,6 +30,29 @@ public class JwtSecurityProperties {
     @NestedConfigurationProperty
     @Builder.Default
     private SigningKey key = new SigningKey();
+    /**
+     * 对外公开签名公钥的 JWKS 端点（RSA/EC），供其他服务通过 jwk-set-uri 远程校验 token。
+     */
+    @NestedConfigurationProperty
+    @Builder.Default
+    private Jwks jwks = new Jwks();
+
+    @Data
+    @NoArgsConstructor
+    public static class Jwks {
+        /**
+         * 是否开启 JWKS 端点，默认关闭
+         */
+        private boolean enabled = false;
+        /**
+         * 端点路径（Spring Authorization Server 默认为 /oauth2/jwks）
+         */
+        private String path = "/auth/jwks";
+        /**
+         * 响应 Cache-Control max-age；设为 0 表示不缓存
+         */
+        private Duration cacheMaxAge = Duration.ofMinutes(5);
+    }
 
     /**
      * 密钥来源，三选一：{@code jwk-location}、{@code private-key-location}（或仅用于校验时的

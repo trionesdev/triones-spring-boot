@@ -3,12 +3,12 @@ package com.trionesdev.spring.boot.security.autoconfigure.jwt;
 import java.util.ArrayList;
 import java.util.Arrays;
 import com.trionesdev.commons.context.actor.ActorContext;
-import com.trionesdev.commons.core.jwt.JwtConfig;
 import com.trionesdev.commons.core.jwt.JwtFacade;
 import com.trionesdev.spring.boot.security.autoconfigure.SecurityConfiguration;
 import com.trionesdev.spring.boot.security.autoconfigure.SecurityProperties;
 import com.trionesdev.spring.security.ActorAuthoritiesResolver;
 import com.trionesdev.spring.security.ResourceServerConfig;
+import com.trionesdev.spring.security.jwks.JwksEndpointConfigurer;
 import com.trionesdev.spring.security.jwt.JwtActorResolver;
 import com.trionesdev.spring.security.jwt.JwtAuthenticationEntryPoint;
 import com.trionesdev.spring.security.jwt.JwtAuthenticationFilter;
@@ -39,6 +39,7 @@ import java.util.List;
 public class JwtSecurityConfiguration {
     private final ApplicationContext applicationContext;
     private final SecurityProperties securityProperties;
+    private final JwtSecurityProperties jwtSecurityProperties;
     private final ObjectProvider<JwtActorResolver> jwtActorResolverProvider;
     private final ObjectProvider<ActorAuthoritiesResolver> authoritiesResolverObjectProvider;
 
@@ -76,7 +77,11 @@ public class JwtSecurityConfiguration {
                 .sessionManagement(sessionManagement -> sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exceptionHandling -> exceptionHandling.authenticationEntryPoint(new JwtAuthenticationEntryPoint()))
         ;
-
+        JwtSecurityProperties.Jwks jwks = jwtSecurityProperties.getJwks();
+        if (jwks != null && jwks.isEnabled()) {
+            http.with(new JwksEndpointConfigurer<>(jwtFacade, jwks.getPath(), jwks.getCacheMaxAge()),
+                    Customizer.withDefaults());
+        }
 
         return http.build();
     }
