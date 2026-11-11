@@ -12,16 +12,16 @@ public class AuthClientProperties {
     private Map<String, Provider> provider;
 
     @Data
-    public static class Registration{
+    public static class Registration {
         private String provider;
         private String clientId;
         private String clientSecret;
-        private String  authorizationGrantType;
+        private String authorizationGrantType;
         private String clientAuthenticationMethod;
     }
 
     @Data
-    public static class Provider{
+    public static class Provider {
         private String tokenUri;
     }
 
