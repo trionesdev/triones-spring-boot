@@ -16,6 +16,8 @@
         <module>spring-boot-starter</module>
         <module>mybatis-plus-spring-boot-starter</module>
         <module>security-spring-boot-starter</module>
+        <module>auth-client-spring-boot-starter</module>
+        <module>authorization-server-spring-boot-starter</module>
         <module>openfeign-spring-boot-starter</module>
         <module>opentelemetry-spring-boot-starter</module>
     </modules>

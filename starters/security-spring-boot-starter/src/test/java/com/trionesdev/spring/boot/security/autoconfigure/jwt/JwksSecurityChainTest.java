@@ -4,7 +4,7 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.trionesdev.commons.context.actor.ActorContext;
 import com.trionesdev.commons.core.jwt.JwtFacade;
 import com.trionesdev.spring.boot.security.autoconfigure.SecurityConfiguration;
-import com.trionesdev.spring.security.jwks.JwksEndpointConfigurer;
+import com.trionesdev.spring.security.authorization.server.jwks.JwksEndpointConfigurer;
 import jakarta.servlet.Filter;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;

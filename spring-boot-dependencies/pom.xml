@@ -75,6 +75,16 @@
             </dependency>
             <dependency>
                 <groupId>com.trionesdev.springboot</groupId>
+                <artifactId>auth-client-spring-boot-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.trionesdev.springboot</groupId>
+                <artifactId>authorization-server-spring-boot-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.trionesdev.springboot</groupId>
                 <artifactId>openfeign-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>

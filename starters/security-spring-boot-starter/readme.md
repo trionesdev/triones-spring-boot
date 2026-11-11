@@ -213,7 +213,7 @@ curl http://localhost:8080/auth/jwks
 
 - 响应为标准 JWK Set（RFC 7517），内容来自 `JwtFacade.getPublicJwkSet()`：签名公钥在前，随后是 `key.verification-keys` 的公钥，**不含任何私钥字段**。密钥轮换期间远程校验方可同时认可新旧 token。
 - 端点由 `JwksEndpointConfigurer` 挂在 **Spring Security 过滤器链内**（与 Spring Authorization Server 的 `NimbusJwkSetEndpointFilter` 做法一致），位于认证/授权过滤器之前并直接写出响应，因此**无需**加入 `exclude-*-matchers`。链中的安全响应头（如 `X-Content-Type-Options`）、CORS 配置照常生效；不依赖 Spring MVC。
-- `jwks.*` 配置只作用于 starter 默认安全链。应用自定义 `SecurityFilterChain` 时需手动接入 `com.trionesdev.spring.security.jwks.JwksEndpointConfigurer`（位于 `spring-security` 组件中，不依赖 starter 配置）。未传入时 `JwtFacade` 从容器获取，路径默认 `/auth/jwks`，缓存默认 5 分钟；要沿用 `triones.security.jwt.jwks.*` 配置，注入 `JwtSecurityProperties` 后传入：
+- `jwks.*` 配置只作用于 starter 默认安全链。应用自定义 `SecurityFilterChain` 时需手动接入 `com.trionesdev.spring.security.authorization.server.jwks.JwksEndpointConfigurer`（位于 `spring-authorization-server` 组件中，不依赖 starter 配置）。未传入时 `JwtFacade` 从容器获取，路径默认 `/auth/jwks`，缓存默认 5 分钟；要沿用 `triones.security.jwt.jwks.*` 配置，注入 `JwtSecurityProperties` 后传入：
 
   ```java
   @Bean
@@ -274,6 +274,10 @@ triones:
 以上为授权服务器使用默认路径时的配置示例，本 starter 不会自动填充这些地址。实际地址应以认证服务的配置为准。
 
 这些 URI 会封装为 `ResourceServerConfig` 交给 `JwtAuthenticationFilter`，具体处理逻辑由依赖 `com.trionesdev.commons:spring-security` 实现，应按所接入的认证服务配置。
+
+### 服务间调用客户端
+
+以 client_credentials 模式申请服务 token 的自动配置（`triones.security.auth.client.*`）已拆分到 `auth-client-spring-boot-starter`，见其 readme。
 
 ## 扩展与集成
 

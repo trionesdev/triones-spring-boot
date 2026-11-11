@@ -11,7 +11,7 @@ import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jwt.proc.DefaultJWTProcessor;
 import com.trionesdev.commons.core.jwt.JwtConfig;
 import com.trionesdev.commons.core.jwt.JwtFacade;
-import com.trionesdev.spring.security.jwks.JwksEndpointFilter;
+import com.trionesdev.spring.security.authorization.server.jwks.JwksEndpointFilter;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockFilterChain;

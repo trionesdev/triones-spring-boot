@@ -8,7 +8,7 @@ import com.trionesdev.spring.boot.security.autoconfigure.SecurityConfiguration;
 import com.trionesdev.spring.boot.security.autoconfigure.SecurityProperties;
 import com.trionesdev.spring.security.ActorAuthoritiesResolver;
 import com.trionesdev.spring.security.ResourceServerConfig;
-import com.trionesdev.spring.security.jwks.JwksEndpointConfigurer;
+import com.trionesdev.spring.security.authorization.server.jwks.JwksEndpointConfigurer;
 import com.trionesdev.spring.security.jwt.JwtActorResolver;
 import com.trionesdev.spring.security.jwt.JwtAuthenticationEntryPoint;
 import com.trionesdev.spring.security.jwt.JwtAuthenticationFilter;
