@@ -4,10 +4,12 @@ import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.JWK;
 import com.trionesdev.commons.core.jwt.JwtConfig;
 import com.trionesdev.commons.core.jwt.JwtFacade;
+import com.trionesdev.spring.security.TokenIssuer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
@@ -19,6 +21,9 @@ import java.util.List;
 @ConditionalOnClass(JwtFacade.class)
 @EnableConfigurationProperties(JwtSecurityProperties.class)
 public class JwtFacadeConfiguration {
+
+
+
     @Bean
     @ConditionalOnMissingBean(JwtFacade.class)
     public JwtFacade jwtFacade(JwtSecurityProperties properties) {
@@ -56,4 +61,13 @@ public class JwtFacadeConfiguration {
                 .algorithm(algorithm).secret(properties.getSecret())
                 .expiration(properties.getExpiration()).build(), signingKey, verificationKeys);
     }
+
+
+    @Bean
+    @ConditionalOnMissingBean(TokenIssuer.class)
+    @ConditionalOnProperty(prefix = "triones.security.oauth2", name = "enabled", havingValue = "false", matchIfMissing = true)
+    public TokenIssuer jwtTokenIssuer(JwtFacade jwtFacade) {
+        return new JwtTokenIssuer(jwtFacade);
+    }
+
 }

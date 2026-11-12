@@ -1,10 +1,14 @@
 package com.trionesdev.spring.boot.security.autoconfigure;
 
+import com.trionesdev.spring.security.SecurityHttpAuthorizeRule;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @SuperBuilder
@@ -12,27 +16,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @AllArgsConstructor
 @ConfigurationProperties("triones.security")
 public class SecurityProperties {
-    private String[] defaultMatchers = {"/favicon.ico"};
-    private String[] excludeMatchers = {};
-    private String[] excludeGetMatchers = {};
-    private String[] excludePostMatchers = {};
-    private String[] excludePutMatchers = {};
-    private String[] excludeDeleteMatchers = {};
-    private String[] ignoreMatchers = {};
-    private ResourceServer resourceServer = new ResourceServer();
 
-    @Data
-    @SuperBuilder
-    @AllArgsConstructor
-    @NoArgsConstructor
-    public static class ResourceServer {
-        private Boolean enabled = false;
-        private Jwt jwt = new Jwt();
-
-        @Data
-        public static class Jwt {
-            private String issuerUri;
-            private String jwkSetUri;
-        }
-    }
+    private boolean csrf = false;
+    private boolean anonymous = false;
+    private List<String> defaultIgnoredMatchers = new ArrayList<>(List.of("/favicon.ico"));
+    private List<String> ignoredMatchers = new ArrayList<>();
+    private List<SecurityHttpAuthorizeRule> rules = new ArrayList<>();
 }

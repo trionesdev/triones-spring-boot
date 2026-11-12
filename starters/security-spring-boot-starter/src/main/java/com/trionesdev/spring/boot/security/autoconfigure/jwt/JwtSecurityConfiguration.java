@@ -1,26 +1,25 @@
 package com.trionesdev.spring.boot.security.autoconfigure.jwt;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import com.trionesdev.commons.context.actor.ActorContext;
 import com.trionesdev.commons.core.jwt.JwtFacade;
 import com.trionesdev.spring.boot.security.autoconfigure.SecurityConfiguration;
 import com.trionesdev.spring.boot.security.autoconfigure.SecurityProperties;
+import com.trionesdev.spring.boot.security.autoconfigure.SecurityUtils;
 import com.trionesdev.spring.security.ActorAuthoritiesResolver;
-import com.trionesdev.spring.security.ResourceServerConfig;
-import com.trionesdev.spring.security.authorization.server.jwks.JwksEndpointConfigurer;
 import com.trionesdev.spring.security.jwt.JwtActorResolver;
 import com.trionesdev.spring.security.jwt.JwtAuthenticationEntryPoint;
 import com.trionesdev.spring.security.jwt.JwtAuthenticationFilter;
 import com.trionesdev.spring.security.jwt.JwtServerConfigurer;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.BooleanUtils;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.*;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -39,50 +38,38 @@ import java.util.List;
 public class JwtSecurityConfiguration {
     private final ApplicationContext applicationContext;
     private final SecurityProperties securityProperties;
-    private final JwtSecurityProperties jwtSecurityProperties;
     private final ObjectProvider<JwtActorResolver> jwtActorResolverProvider;
     private final ObjectProvider<ActorAuthoritiesResolver> authoritiesResolverObjectProvider;
 
     @Bean
     @ConditionalOnMissingBean(SecurityFilterChain.class)
     public SecurityFilterChain securityWebFilterChain(HttpSecurity http, JwtFacade jwtFacade, ActorContext actorContext) throws Exception {
-        SecurityProperties.ResourceServer.Jwt jwtProps = securityProperties.getResourceServer().getJwt();
-        ResourceServerConfig.Jwt jwtConfig = ResourceServerConfig.Jwt.builder().issuerUri(jwtProps.getIssuerUri())
-                .jwkSetUri(jwtProps.getJwkSetUri())
-                .build();
-        ResourceServerConfig resourceServerConfig = ResourceServerConfig.builder()
-                .enabled(securityProperties.getResourceServer().getEnabled())
-                .jwt(jwtConfig).build();
-        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(resourceServerConfig, jwtFacade, actorContext,
+
+        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtFacade, actorContext,
                 jwtActorResolverProvider.getIfAvailable(),
                 authoritiesResolverObjectProvider.getIfAvailable());
         JwtServerConfigurer<HttpSecurity> jwtServerConfigurer = new JwtServerConfigurer<>(applicationContext, jwtAuthenticationFilter);
 
-        List<String> ignoreMatcherList = new ArrayList<>(Arrays.asList(securityProperties.getDefaultMatchers()));
-        ignoreMatcherList.addAll(Arrays.asList(securityProperties.getIgnoreMatchers()));
+        List<String> ignoreMatcherList = securityProperties.getDefaultIgnoredMatchers();
+        ignoreMatcherList.addAll(securityProperties.getIgnoredMatchers());
 
-        http.csrf(AbstractHttpConfigurer::disable)
-                .anonymous(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(authorizeRequests ->
-                        authorizeRequests
-                                .requestMatchers(ignoreMatcherList.toArray(String[]::new)).permitAll()
-                                .requestMatchers(securityProperties.getExcludeMatchers()).permitAll()
-                                .requestMatchers(HttpMethod.GET, securityProperties.getExcludeGetMatchers()).permitAll()
-                                .requestMatchers(HttpMethod.POST, securityProperties.getExcludePostMatchers()).permitAll()
-                                .requestMatchers(HttpMethod.PUT, securityProperties.getExcludePutMatchers()).permitAll()
-                                .requestMatchers(HttpMethod.DELETE, securityProperties.getExcludeDeleteMatchers()).permitAll()
-                                .anyRequest().authenticated()
+        if (BooleanUtils.isFalse(securityProperties.isCsrf())) {
+            http.csrf(AbstractHttpConfigurer::disable);
+        }
+        if (BooleanUtils.isFalse(securityProperties.isAnonymous())) {
+            http.anonymous(AbstractHttpConfigurer::disable);
+        }
+        http.authorizeHttpRequests(authorizeRequests ->
+                        {
+                            authorizeRequests.requestMatchers(ignoreMatcherList.toArray(String[]::new)).permitAll();
+                            SecurityUtils.configureAuthorization(authorizeRequests, securityProperties.getRules());
+                            authorizeRequests.anyRequest().authenticated();
+                        }
                 )
                 .with(jwtServerConfigurer, Customizer.withDefaults())
                 .sessionManagement(sessionManagement -> sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exceptionHandling -> exceptionHandling.authenticationEntryPoint(new JwtAuthenticationEntryPoint()))
         ;
-        JwtSecurityProperties.Jwks jwks = jwtSecurityProperties.getJwks();
-        if (jwks != null && jwks.isEnabled()) {
-            http.with(new JwksEndpointConfigurer<>(jwtFacade, jwks.getPath(), jwks.getCacheMaxAge()),
-                    Customizer.withDefaults());
-        }
-
         return http.build();
     }
 

@@ -75,12 +75,7 @@
             </dependency>
             <dependency>
                 <groupId>com.trionesdev.springboot</groupId>
-                <artifactId>auth-client-spring-boot-starter</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.trionesdev.springboot</groupId>
-                <artifactId>authorization-server-spring-boot-starter</artifactId>
+                <artifactId>security-oauth2-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
