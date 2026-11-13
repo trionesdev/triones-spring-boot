@@ -57,6 +57,8 @@ import static com.trionesdev.spring.security.oauth2.server.authorization.RASLoad
 public class Oauth2AuthorizationServerConfiguration {
     private static final String LOGIN_PAGE = "/login";
 
+    private final ObjectProvider<OAuth2AuthorizationServerCustomizer> authorizationServerObjectProvider;
+
     @Bean
     public JWKSource<SecurityContext> jwkSource(AuthorizationServerProperties properties) throws Exception {
         return new ImmutableJWKSet<>(new JWKSet(loadRsaKey(properties.getJwk().getKeyStore())));
@@ -130,14 +132,20 @@ public class Oauth2AuthorizationServerConfiguration {
     @Order(Ordered.HIGHEST_PRECEDENCE)
     public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http,
                                                                       OAuth2TokenGenerator<OAuth2Token> tokenGenerator) throws Exception {
+        OAuth2AuthorizationServerCustomizer serverCustomizer = authorizationServerObjectProvider.getIfAvailable(() -> null);
         OAuth2AuthorizationServerConfigurer authorizationServerConfigurer =
                 OAuth2AuthorizationServerConfigurer.authorizationServer();
         var authenticationEntryPoint = new JwtAuthenticationEntryPoint();
         http
                 .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
-                .with(authorizationServerConfigurer, authorizationServer -> authorizationServer
-                        .tokenGenerator(tokenGenerator)
-                        .oidc(Customizer.withDefaults()))
+                .with(authorizationServerConfigurer, authorizationServer -> {
+                    authorizationServer
+                            .tokenGenerator(tokenGenerator)
+                            .oidc(Customizer.withDefaults());
+                    if (serverCustomizer != null) {
+                        serverCustomizer.customize(authorizationServer);
+                    }
+                })
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
                 // 浏览器访问授权端点且未登录时跳转登录页；/oauth2/token 等接口认证失败仍返回 401
                 .exceptionHandling(exceptionHandling -> exceptionHandling.authenticationEntryPoint(authenticationEntryPoint))

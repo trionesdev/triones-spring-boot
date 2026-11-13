@@ -28,7 +28,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class Oauth2AuthorizationServerConfigurationTest {
+class OAuth2AuthorizationServerCustomizerConfigurationTest {
     private static final String CLIENT = "triones.security.oauth2.authorization-server.default-client.";
 
     private final WebApplicationContextRunner runner = new WebApplicationContextRunner()
