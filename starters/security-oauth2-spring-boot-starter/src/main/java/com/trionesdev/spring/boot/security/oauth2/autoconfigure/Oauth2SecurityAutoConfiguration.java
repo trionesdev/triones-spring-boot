@@ -11,14 +11,17 @@ import com.trionesdev.spring.security.jwt.JwtAuthenticationEntryPoint;
 import com.trionesdev.spring.security.oauth2.ActorContextFilter;
 import com.trionesdev.spring.security.oauth2.ActorJwtAuthenticationConverter;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.BooleanUtils;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -35,15 +38,23 @@ import java.util.List;
 
 
 @RequiredArgsConstructor
-@Configuration
-public class Oauth2SecurityConfiguration {
+@AutoConfiguration
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+@ConditionalOnClass(HttpSecurity.class)
+@EnableWebSecurity
+@EnableConfigurationProperties(value = {
+        Oauth2Properties.class
+})
+public class Oauth2SecurityAutoConfiguration {
     private final SecurityProperties securityProperties;
     private final ObjectProvider<JwtActorResolver> jwtActorResolverProvider;
     private final ObjectProvider<ActorAuthoritiesResolver> authoritiesResolverProvider;
 
+
     @Bean
     @Order(Ordered.LOWEST_PRECEDENCE)
-    public SecurityFilterChain securityWebFilterChain(HttpSecurity http, JwtDecoder jwtDecoder, ActorContext actorContext) throws Exception {
+    public SecurityFilterChain securityWebFilterChain(HttpSecurity http, ObjectProvider<JwtDecoder> jwtDecoderProvider, ActorContext actorContext) throws Exception {
+        var jwtDecoder = jwtDecoderProvider.getIfAvailable();
         List<String> ignoredMatchers = new ArrayList<>(securityProperties.getDefaultIgnoredMatchers());
         ignoredMatchers.addAll(securityProperties.getIgnoredMatchers());
 

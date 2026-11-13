@@ -19,6 +19,8 @@
         <module>openfeign-spring-boot-starter</module>
         <module>opentelemetry-spring-boot-starter</module>
         <module>security-oauth2-spring-boot-starter</module>
+        <module>oauth2-authorization-server-spring-boot-starter</module>
+        <module>oauth2-client-spring-boot-starter</module>
     </modules>
 
     <properties>

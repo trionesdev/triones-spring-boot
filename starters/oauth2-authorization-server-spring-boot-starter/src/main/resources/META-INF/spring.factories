@@ -1,0 +1,2 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+com.trionesdev.spring.boot.security.oauth2.server.authorization.autoconfigure.Oauth2AuthorizationServerConfiguration

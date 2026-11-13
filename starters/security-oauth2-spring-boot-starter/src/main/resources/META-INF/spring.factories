@@ -1,4 +1,2 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-com.trionesdev.spring.boot.security.autoconfigure.SecurityConfiguration,\
-  com.trionesdev.spring.boot.security.autoconfigure.jwt.JwtSecurityConfiguration,\
-  com.trionesdev.spring.boot.security.autoconfigure.jwt.JwtFacadeConfiguration
+com.trionesdev.spring.boot.security.oauth2.autoconfigure.Oauth2SecurityAutoConfiguration
