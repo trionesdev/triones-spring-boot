@@ -12,6 +12,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @AllArgsConstructor
 @ConfigurationProperties("triones.security.oauth2")
 public class Oauth2Properties {
+
     private AuthorizationServer authorizationServer;
 
     @Data

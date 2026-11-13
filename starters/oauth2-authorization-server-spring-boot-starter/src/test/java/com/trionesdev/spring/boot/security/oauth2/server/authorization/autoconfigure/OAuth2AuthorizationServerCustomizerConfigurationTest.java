@@ -23,8 +23,12 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import org.springframework.core.annotation.Order;
+
 import javax.sql.DataSource;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -101,6 +105,18 @@ class OAuth2AuthorizationServerCustomizerConfigurationTest {
     }
 
     @Test
+    void appliesAllCustomizersInOrder() {
+        runner.withPropertyValues("triones.security.authorization.mode=oauth2",
+                        CLIENT + "client-id=platform",
+                        CLIENT + "client-secret=secret")
+                .withUserConfiguration(TwoCustomizers.class)
+                .run(context -> {
+                    assertNull(context.getStartupFailure());
+                    assertEquals(List.of("first", "second"), context.getBean(TwoCustomizers.class).invoked);
+                });
+    }
+
+    @Test
     void embeddedIssuerRequiresClientId() {
         runner.withPropertyValues("triones.security.authorization.mode=oauth2")
                 .run(context -> assertNotNull(context.getStartupFailure()));
@@ -122,6 +138,26 @@ class OAuth2AuthorizationServerCustomizerConfigurationTest {
         @Bean
         JdbcTemplate jdbcTemplate(DataSource dataSource) {
             return new JdbcTemplate(dataSource);
+        }
+    }
+
+    /**
+     * 两个实现：声明顺序与 @Order 相反，验证按 @Order 执行
+     */
+    @Configuration(proxyBeanMethods = false)
+    static class TwoCustomizers {
+        final List<String> invoked = new CopyOnWriteArrayList<>();
+
+        @Bean
+        @Order(2)
+        OAuth2AuthorizationServerCustomizer secondCustomizer() {
+            return configurer -> invoked.add("second");
+        }
+
+        @Bean
+        @Order(1)
+        OAuth2AuthorizationServerCustomizer firstCustomizer() {
+            return configurer -> invoked.add("first");
         }
     }
 
