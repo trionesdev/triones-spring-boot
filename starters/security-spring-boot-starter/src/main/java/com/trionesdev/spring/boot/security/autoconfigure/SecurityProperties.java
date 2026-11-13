@@ -22,4 +22,15 @@ public class SecurityProperties {
     private List<String> defaultIgnoredMatchers = new ArrayList<>(List.of("/favicon.ico"));
     private List<String> ignoredMatchers = new ArrayList<>();
     private List<SecurityHttpAuthorizeRule> rules = new ArrayList<>();
+    private Authorization authorization = new Authorization();
+
+    @Data
+    public static class Authorization {
+        private AuthorizationMode mode = AuthorizationMode.JWT;
+    }
+
+    public enum AuthorizationMode {
+        JWT,
+        OAUTH2
+    }
 }

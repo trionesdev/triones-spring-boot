@@ -15,6 +15,7 @@ import org.apache.commons.lang3.BooleanUtils;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -53,6 +54,7 @@ public class Oauth2SecurityAutoConfiguration {
 
     @Bean
     @Order(Ordered.LOWEST_PRECEDENCE)
+    @ConditionalOnProperty(value = "triones.security.authorization.mode", havingValue = "oauth2", matchIfMissing = false)
     public SecurityFilterChain securityWebFilterChain(HttpSecurity http, ObjectProvider<JwtDecoder> jwtDecoderProvider, ActorContext actorContext) throws Exception {
         var jwtDecoder = jwtDecoderProvider.getIfAvailable();
         List<String> ignoredMatchers = new ArrayList<>(securityProperties.getDefaultIgnoredMatchers());

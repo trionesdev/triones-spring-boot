@@ -16,6 +16,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
@@ -43,6 +44,7 @@ public class JwtSecurityConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(SecurityFilterChain.class)
+    @ConditionalOnProperty(value = "triones.security.authorization.mode", havingValue = "jwt", matchIfMissing = true)
     public SecurityFilterChain securityWebFilterChain(HttpSecurity http, JwtFacade jwtFacade, ActorContext actorContext) throws Exception {
 
         JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtFacade, actorContext,

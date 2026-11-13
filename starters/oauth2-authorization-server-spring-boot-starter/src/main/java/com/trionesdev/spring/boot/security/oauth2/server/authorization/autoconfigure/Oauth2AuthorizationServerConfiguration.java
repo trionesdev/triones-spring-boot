@@ -1,5 +1,7 @@
 package com.trionesdev.spring.boot.security.oauth2.server.authorization.autoconfigure;
 
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.trionesdev.spring.security.jwt.JwtAuthenticationEntryPoint;
@@ -18,6 +20,7 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.core.OAuth2Token;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationConsentService;
 import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationService;
@@ -25,10 +28,13 @@ import org.springframework.security.oauth2.server.authorization.OAuth2Authorizat
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
+import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.token.*;
 import org.springframework.security.web.SecurityFilterChain;
+
+import static com.trionesdev.spring.security.oauth2.server.authorization.RASLoader.loadRsaKey;
 
 
 @RequiredArgsConstructor
@@ -42,41 +48,16 @@ import org.springframework.security.web.SecurityFilterChain;
 public class Oauth2AuthorizationServerConfiguration {
     private static final String LOGIN_PAGE = "/login";
 
-    /**
-     * 授权服务器端点
-     */
     @Bean
-    @Order(Ordered.HIGHEST_PRECEDENCE)
-    public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http,
-                                                                      OAuth2TokenGenerator<OAuth2Token> tokenGenerator) throws Exception {
-        OAuth2AuthorizationServerConfigurer authorizationServerConfigurer =
-                OAuth2AuthorizationServerConfigurer.authorizationServer();
-        var authenticationEntryPoint = new JwtAuthenticationEntryPoint();
-        http
-                .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
-                .with(authorizationServerConfigurer, authorizationServer -> authorizationServer
-                        .tokenGenerator(tokenGenerator)
-                        .oidc(Customizer.withDefaults()))
-                .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
-                // 浏览器访问授权端点且未登录时跳转登录页；/oauth2/token 等接口认证失败仍返回 401
-                .exceptionHandling(exceptionHandling -> exceptionHandling.authenticationEntryPoint(authenticationEntryPoint))
-                // /userinfo 使用 access_token 认证
-                .oauth2ResourceServer(resourceServer -> resourceServer.jwt(Customizer.withDefaults()));
-        return http.build();
+    public JWKSource<SecurityContext> jwkSource(AuthorizationServerProperties properties) throws Exception {
+        return new ImmutableJWKSet<>(new JWKSet(loadRsaKey(properties.getJwk().getKeyStore())));
     }
 
-    /**
-     * 授权登录页（Spring Security 内置表单登录页）
-     */
     @Bean
-    @Order(Ordered.HIGHEST_PRECEDENCE + 1)
-    public SecurityFilterChain authorizationServerLoginSecurityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .securityMatcher(LOGIN_PAGE)
-                .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
-                .formLogin(Customizer.withDefaults());
-        return http.build();
+    public JwtDecoder jwtDecoder(JWKSource<SecurityContext> jwkSource) {
+        return OAuth2AuthorizationServerConfiguration.jwtDecoder(jwkSource);
     }
+
 
     @Bean
     public AuthorizationServerSettings authorizationServerSettings() {
@@ -120,4 +101,42 @@ public class Oauth2AuthorizationServerConfiguration {
         jwtGenerator.setJwtCustomizer(new ActorTokenCustomizer());
         return new DelegatingOAuth2TokenGenerator(jwtGenerator, new OAuth2AccessTokenGenerator(), new OAuth2RefreshTokenGenerator());
     }
+
+    /**
+     * 授权服务器端点
+     */
+    @Bean
+    @Order(Ordered.HIGHEST_PRECEDENCE)
+    public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http,
+                                                                      OAuth2TokenGenerator<OAuth2Token> tokenGenerator) throws Exception {
+        OAuth2AuthorizationServerConfigurer authorizationServerConfigurer =
+                OAuth2AuthorizationServerConfigurer.authorizationServer();
+        var authenticationEntryPoint = new JwtAuthenticationEntryPoint();
+        http
+                .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
+                .with(authorizationServerConfigurer, authorizationServer -> authorizationServer
+                        .tokenGenerator(tokenGenerator)
+                        .oidc(Customizer.withDefaults()))
+                .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
+                // 浏览器访问授权端点且未登录时跳转登录页；/oauth2/token 等接口认证失败仍返回 401
+                .exceptionHandling(exceptionHandling -> exceptionHandling.authenticationEntryPoint(authenticationEntryPoint))
+                // /userinfo 使用 access_token 认证
+                .oauth2ResourceServer(resourceServer -> resourceServer.jwt(Customizer.withDefaults()));
+        return http.build();
+    }
+
+    /**
+     * 授权登录页（Spring Security 内置表单登录页）
+     */
+    @Bean
+    @Order(Ordered.HIGHEST_PRECEDENCE + 1)
+    public SecurityFilterChain authorizationServerLoginSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher(LOGIN_PAGE)
+                .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
+                .formLogin(Customizer.withDefaults());
+        return http.build();
+    }
+
+
 }
