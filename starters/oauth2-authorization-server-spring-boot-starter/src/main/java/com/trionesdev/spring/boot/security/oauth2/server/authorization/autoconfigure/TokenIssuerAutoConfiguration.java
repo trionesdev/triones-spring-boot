@@ -5,6 +5,7 @@ import com.trionesdev.spring.security.oauth2.server.authorization.EmbeddedOauth2
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.oauth2.core.OAuth2Token;
@@ -16,9 +17,10 @@ import org.springframework.security.oauth2.server.authorization.token.OAuth2Toke
 @RequiredArgsConstructor
 @Configuration
 @ConditionalOnProperty(value = "triones.security.authorization.mode", havingValue = "oauth2", matchIfMissing = false)
+@EnableConfigurationProperties(AuthorizationServerProperties.class)
 public class TokenIssuerAutoConfiguration {
 
-    private final String clientId;
+    private final AuthorizationServerProperties authorizationServerProperties;
 
 
     @Bean
@@ -28,6 +30,7 @@ public class TokenIssuerAutoConfiguration {
             ObjectProvider<OAuth2AuthorizationService> authorizationServiceProvider,
             ObjectProvider<OAuth2TokenGenerator<OAuth2Token>> tokenGeneratorProvider
     ) {
+        String clientId = authorizationServerProperties.getDefaultClient().getClientId();
         AuthorizationServerSettings authorizationServerSettings = authorizationServerSettingsProvider.getIfAvailable();
         RegisteredClientRepository registeredClientRepository = registeredClientRepositoryProvider.getIfAvailable();
         OAuth2AuthorizationService authorizationService = authorizationServiceProvider.getIfAvailable();
