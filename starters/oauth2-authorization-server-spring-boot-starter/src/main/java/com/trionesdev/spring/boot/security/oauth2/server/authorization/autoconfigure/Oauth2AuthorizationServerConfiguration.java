@@ -8,8 +8,12 @@ import com.trionesdev.spring.security.jwt.JwtAuthenticationEntryPoint;
 import com.trionesdev.spring.security.oauth2.server.authorization.ActorTokenCustomizer;
 import com.trionesdev.spring.security.oauth2.server.authorization.EmbeddedOauth2TokenIssuer;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -37,10 +41,15 @@ import org.springframework.security.web.SecurityFilterChain;
 import static com.trionesdev.spring.security.oauth2.server.authorization.RASLoader.loadRsaKey;
 
 
+/**
+ * 嵌入式 OAuth2 授权服务器，仅在 {@code triones.security.authorization.mode=oauth2} 时生效：
+ * jwt 模式下资源服务器用 JwtFacade 校验，这里签发的令牌无法通过，且不应额外要求 JDBC 与授权端点。
+ */
 @RequiredArgsConstructor
 @AutoConfiguration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @ConditionalOnClass(HttpSecurity.class)
+@ConditionalOnProperty(value = "triones.security.authorization.mode", havingValue = "oauth2")
 @EnableWebSecurity
 @EnableConfigurationProperties(value = {
         AuthorizationServerProperties.class
@@ -71,6 +80,18 @@ public class Oauth2AuthorizationServerConfiguration {
     @Bean
     public RegisteredClientRepository registeredClientRepository(JdbcOperations jdbcOperations) {
         return new JdbcRegisteredClientRepository(jdbcOperations);
+    }
+
+    /**
+     * 启动时把 {@code default-client} 写入 oauth2_registered_client（已存在则不覆盖）
+     */
+    @Bean
+    @ConditionalOnProperty(prefix = "triones.security.oauth2.authorization-server.default-client", name = "client-id")
+    public DefaultClientRegistrar defaultClientRegistrar(AuthorizationServerProperties properties,
+                                                         RegisteredClientRepository registeredClientRepository,
+                                                         ObjectProvider<PasswordEncoder> passwordEncoder) {
+        return new DefaultClientRegistrar(properties.getDefaultClient(), registeredClientRepository,
+                passwordEncoder.getIfUnique(PasswordEncoderFactories::createDelegatingPasswordEncoder));
     }
 
     /**

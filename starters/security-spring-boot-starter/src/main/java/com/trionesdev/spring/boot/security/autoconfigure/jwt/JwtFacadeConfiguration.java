@@ -63,9 +63,13 @@ public class JwtFacadeConfiguration {
     }
 
 
+    /**
+     * jwt 模式（默认）下用 {@link JwtFacade} 签发；oauth2 模式由授权服务器 starter 的 EmbeddedOauth2TokenIssuer 签发，
+     * 否则签发密钥与资源服务器校验密钥不一致。
+     */
     @Bean
     @ConditionalOnMissingBean(TokenIssuer.class)
-    @ConditionalOnProperty(prefix = "triones.security.oauth2", name = "enabled", havingValue = "false", matchIfMissing = true)
+    @ConditionalOnProperty(value = "triones.security.authorization.mode", havingValue = "jwt", matchIfMissing = true)
     public TokenIssuer jwtTokenIssuer(JwtFacade jwtFacade) {
         return new JwtTokenIssuer(jwtFacade);
     }

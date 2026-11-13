@@ -6,20 +6,27 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.Duration;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
- * OAuth2 授权服务器配置
+ * OAuth2 授权服务器配置（仅 {@code triones.security.authorization.mode=oauth2} 时生效）
  * <pre>
- * oauth2:
- *   authorization-server:
- *     issuer: https://auth.example.com
- *     jwk:
- *       key-store:
- *         location: file:/etc/belt/oauth2-jwk.p12
- *         password: changeit
- *         alias: oauth2
- *         key-password: changeit
+ * triones:
+ *   security:
+ *     authorization:
+ *       mode: oauth2
+ *     oauth2:
+ *       authorization-server:
+ *         jwk:
+ *           key-store:
+ *             location: file:/etc/belt/oauth2-jwk.p12
+ *             password: changeit
+ *             alias: oauth2
+ *             key-password: changeit
+ *         default-client:              # 平台登录客户端，启动时写入 oauth2_registered_client（已存在不覆盖）
+ *           client-id: platform
+ *           client-secret: ${OAUTH2_PLATFORM_SECRET}
  * </pre>
  */
 @Data
@@ -46,7 +53,7 @@ public class AuthorizationServerProperties {
          */
         private String clientName;
         /**
-         * 客户端密钥。可写明文（启动时以 bcrypt 加密后入库），或带编码前缀的密文，如 {bcrypt}$2a$10$...。
+         * 客户端密钥。可写明文（启动时用容器的 PasswordEncoder 编码后入库，未注册时为 {bcrypt}），或带编码前缀的密文，如 {bcrypt}$2a$10$...。
          * 为空表示公共客户端（浏览器、移动端）：认证方式为 none，只能走 authorization_code + PKCE。
          * 不要把明文写进仓库，用环境变量注入，如 ${OAUTH2_CLIENT_XXX_SECRET}。
          */
@@ -56,9 +63,10 @@ public class AuthorizationServerProperties {
          */
         private Set<String> clientAuthenticationMethods = new LinkedHashSet<>();
         /**
-         * 授权类型：client_credentials、authorization_code、refresh_token 等
+         * 授权类型：client_credentials、authorization_code、refresh_token 等。
+         * 嵌入式令牌签发（平台登录）需要 refresh_token，默认包含
          */
-        private Set<String> authorizationGrantTypes = new LinkedHashSet<>(Set.of("client_credentials"));
+        private Set<String> authorizationGrantTypes = new LinkedHashSet<>(List.of("client_credentials", "refresh_token"));
         private Set<String> scopes = new LinkedHashSet<>();
         /**
          * authorization_code 回调地址
