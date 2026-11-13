@@ -20,10 +20,10 @@ public class Oauth2Properties {
         /**
          * 授权服务器模式
          */
-        private AuthorizationServerMode mode;
+        private AuthorizationServerMode mode = AuthorizationServerMode.EMBEDDED;
     }
 
-    public enum AuthorizationServerMode{
+    public enum AuthorizationServerMode {
         /**
          * 独立模式
          */

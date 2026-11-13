@@ -24,6 +24,7 @@ public class TokenIssuerAutoConfiguration {
 
 
     @Bean
+    @ConditionalOnProperty(value = "triones.security.oauth2.authorization-server.mode", havingValue = "embedded", matchIfMissing = false)
     public TokenIssuer embeddedTokenIssuer(
             ObjectProvider<AuthorizationServerSettings> authorizationServerSettingsProvider,
             ObjectProvider<RegisteredClientRepository> registeredClientRepositoryProvider,
