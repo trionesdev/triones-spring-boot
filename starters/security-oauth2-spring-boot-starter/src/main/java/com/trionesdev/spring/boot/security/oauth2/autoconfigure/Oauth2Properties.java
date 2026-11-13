@@ -16,7 +16,6 @@ public class Oauth2Properties {
 
     @Data
     public static class AuthorizationServer {
-        private boolean enabled;
         /**
          * 授权服务器模式
          */
