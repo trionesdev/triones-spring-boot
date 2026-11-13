@@ -6,7 +6,7 @@ import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.trionesdev.spring.security.jwt.JwtAuthenticationEntryPoint;
 import com.trionesdev.spring.security.oauth2.server.authorization.ActorTokenCustomizer;
-import com.trionesdev.spring.security.oauth2.server.authorization.Oauth2TokenIssuer;
+import com.trionesdev.spring.security.oauth2.server.authorization.EmbeddedOauth2TokenIssuer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -93,7 +93,7 @@ public class Oauth2AuthorizationServerConfiguration {
 
 
     /**
-     * 令牌生成器：授权服务器端点与 {@link Oauth2TokenIssuer} 共用
+     * 令牌生成器：授权服务器端点与 {@link EmbeddedOauth2TokenIssuer} 共用
      */
     @Bean
     public OAuth2TokenGenerator<OAuth2Token> tokenGenerator(JWKSource<SecurityContext> jwkSource) {
