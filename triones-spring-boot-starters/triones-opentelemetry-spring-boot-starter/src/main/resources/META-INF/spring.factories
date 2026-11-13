@@ -1,3 +1,0 @@
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-com.trionesdev.spring.boot.opentelemetry.autoconfigure.OpentelemetrySpringWebAutoConfiguration,\
-com.trionesdev.spring.boot.opentelemetry.autoconfigure.OpentelemetryFeignAuoConfiguration

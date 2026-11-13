@@ -4,20 +4,20 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.trionesdev.springboot</groupId>
-    <artifactId>triones-spring-boot</artifactId>
+    <artifactId>spring-boot</artifactId>
     <packaging>pom</packaging>
-    <version>3.0.2-SNAPSHOT</version>
+    <version>3.0.3-SNAPSHOT</version>
     <name>Triones:SpringBoot</name>
     <modules>
-        <module>triones-spring-boot-dependencies</module>
-        <module>triones-spring-boot-starters</module>
+        <module>spring-boot-dependencies</module>
+        <module>starters</module>
     </modules>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-        <spring-boot.version>3.3.0</spring-boot.version>
+        <spring-boot.version>3.5.10</spring-boot.version>
         <spring-cloud.veriosn>2023.0.1</spring-cloud.veriosn>
     </properties>
 
