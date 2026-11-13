@@ -34,7 +34,34 @@ import java.util.Set;
 public class AuthorizationServerProperties {
     private Jwk jwk = new Jwk();
     private Client defaultClient = new Client();
+    private Login login = new Login();
 
+
+    @Data
+    public static class Login {
+        /**
+         * 浏览器未登录访问授权端点（/oauth2/authorize 等）时的处理方式：
+         * json（默认）返回 401 JSON，redirect 跳转登录页。
+         * 非浏览器请求（Accept 不含 text/html，如 /oauth2/token）始终返回 401 JSON
+         */
+        private Unauthenticated unauthenticated = Unauthenticated.JSON;
+        /**
+         * 登录页路径，以 / 开头（相对应用 context path）。
+         * 默认 /login 使用 Spring Security 内置登录页；其他路径需应用自行提供页面，登录表单 POST 到同一路径
+         */
+        private String page = "/login";
+    }
+
+    public enum Unauthenticated {
+        /**
+         * 跳转登录页，登录成功后回到原授权请求
+         */
+        REDIRECT,
+        /**
+         * 返回 401 JSON
+         */
+        JSON
+    }
 
     @Data
     public static class Jwk {

@@ -36,7 +36,16 @@ import org.springframework.security.oauth2.server.authorization.config.annotatio
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.token.*;
+import org.springframework.http.MediaType;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.DelegatingAuthenticationEntryPoint;
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
+import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
+
+import java.util.LinkedHashMap;
+import java.util.Set;
 
 import static com.trionesdev.spring.security.oauth2.server.authorization.RASLoader.loadRsaKey;
 
@@ -55,7 +64,7 @@ import static com.trionesdev.spring.security.oauth2.server.authorization.RASLoad
         AuthorizationServerProperties.class
 })
 public class Oauth2AuthorizationServerConfiguration {
-    private static final String LOGIN_PAGE = "/login";
+    private static final String DEFAULT_LOGIN_PAGE = "/login";
 
     private final ObjectProvider<OAuth2AuthorizationServerCustomizer> authorizationServerCustomizers;
 
@@ -131,10 +140,11 @@ public class Oauth2AuthorizationServerConfiguration {
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
     public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http,
+                                                                      AuthorizationServerProperties properties,
                                                                       OAuth2TokenGenerator<OAuth2Token> tokenGenerator) throws Exception {
         OAuth2AuthorizationServerConfigurer authorizationServerConfigurer =
                 OAuth2AuthorizationServerConfigurer.authorizationServer();
-        var authenticationEntryPoint = new JwtAuthenticationEntryPoint();
+        var authenticationEntryPoint = unauthenticatedEntryPoint(properties.getLogin());
         http
                 .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
                 .with(authorizationServerConfigurer, authorizationServer -> {
@@ -146,7 +156,7 @@ public class Oauth2AuthorizationServerConfiguration {
                             .forEach(customizer -> customizer.customize(authorizationServer));
                 })
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
-                // 浏览器访问授权端点且未登录时跳转登录页；/oauth2/token 等接口认证失败仍返回 401
+                // 未登录：按 login.unauthenticated 跳转登录页或返回 401 JSON；/oauth2/token 等非浏览器请求始终 401 JSON
                 .exceptionHandling(exceptionHandling -> exceptionHandling.authenticationEntryPoint(authenticationEntryPoint))
                 // /userinfo 使用 access_token 认证
                 .oauth2ResourceServer(resourceServer -> resourceServer.jwt(Customizer.withDefaults()));
@@ -154,16 +164,53 @@ public class Oauth2AuthorizationServerConfiguration {
     }
 
     /**
-     * 授权登录页（Spring Security 内置表单登录页）
+     * 授权登录页：默认 /login 使用 Spring Security 内置登录页；配置其他路径时页面由应用提供，表单 POST 到同一路径。
+     * 登录成功后回到被拦截的授权请求（会话中保存的原请求）。
      */
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE + 1)
-    public SecurityFilterChain authorizationServerLoginSecurityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain authorizationServerLoginSecurityFilterChain(HttpSecurity http,
+                                                                           AuthorizationServerProperties properties) throws Exception {
+        String loginPage = loginPage(properties.getLogin());
         http
-                .securityMatcher(LOGIN_PAGE)
+                .securityMatcher(loginPage)
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
-                .formLogin(Customizer.withDefaults());
+                .formLogin(form -> {
+                    // 显式设置 loginPage 会关闭内置登录页，默认路径保持内置页
+                    if (!DEFAULT_LOGIN_PAGE.equals(loginPage)) {
+                        form.loginPage(loginPage);
+                    }
+                });
         return http.build();
+    }
+
+    /**
+     * redirect：浏览器请求（Accept 含 text/html，不含 *&#47;*）跳转登录页，其他请求返回 401 JSON；
+     * json：全部返回 401 JSON
+     */
+    static AuthenticationEntryPoint unauthenticatedEntryPoint(AuthorizationServerProperties.Login login) {
+        var json = new JwtAuthenticationEntryPoint();
+        String loginPage = loginPage(login);
+        if (login.getUnauthenticated() == AuthorizationServerProperties.Unauthenticated.JSON) {
+            return json;
+        }
+        var browser = new MediaTypeRequestMatcher(MediaType.TEXT_HTML);
+        // curl、HTTP 客户端默认 Accept: */*，不应被当成浏览器跳转
+        browser.setIgnoredMediaTypes(Set.of(MediaType.ALL));
+        LinkedHashMap<RequestMatcher, AuthenticationEntryPoint> entryPoints = new LinkedHashMap<>();
+        entryPoints.put(browser, new LoginUrlAuthenticationEntryPoint(loginPage));
+        var delegating = new DelegatingAuthenticationEntryPoint(entryPoints);
+        delegating.setDefaultEntryPoint(json);
+        return delegating;
+    }
+
+    private static String loginPage(AuthorizationServerProperties.Login login) {
+        String page = login.getPage();
+        if (page == null || !page.startsWith("/")) {
+            throw new IllegalArgumentException("triones.security.oauth2.authorization-server.login.page must start "
+                    + "with '/': " + page);
+        }
+        return page;
     }
 
 
