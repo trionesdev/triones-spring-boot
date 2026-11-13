@@ -86,14 +86,6 @@ public class Oauth2AuthorizationServerConfiguration {
     }
 
     /**
-     * 客户端（oauth2_registered_client）
-     */
-    @Bean
-    public RegisteredClientRepository registeredClientRepository(JdbcOperations jdbcOperations) {
-        return new JdbcRegisteredClientRepository(jdbcOperations);
-    }
-
-    /**
      * 启动时把 {@code default-client} 写入 oauth2_registered_client（已存在则不覆盖）
      */
     @Bean
@@ -104,25 +96,6 @@ public class Oauth2AuthorizationServerConfiguration {
         return new DefaultClientRegistrar(properties.getDefaultClient(), registeredClientRepository,
                 passwordEncoder.getIfUnique(PasswordEncoderFactories::createDelegatingPasswordEncoder));
     }
-
-    /**
-     * 授权记录（oauth2_authorization）
-     */
-    @Bean
-    public OAuth2AuthorizationService authorizationService(JdbcOperations jdbcOperations,
-                                                           RegisteredClientRepository registeredClientRepository) {
-        return new JdbcOAuth2AuthorizationService(jdbcOperations, registeredClientRepository);
-    }
-
-    /**
-     * 用户授权同意（oauth2_authorization_consent）
-     */
-    @Bean
-    public OAuth2AuthorizationConsentService authorizationConsentService(JdbcOperations jdbcOperations,
-                                                                         RegisteredClientRepository registeredClientRepository) {
-        return new JdbcOAuth2AuthorizationConsentService(jdbcOperations, registeredClientRepository);
-    }
-
 
     /**
      * 令牌生成器：授权服务器端点与 {@link EmbeddedOauth2TokenIssuer} 共用
