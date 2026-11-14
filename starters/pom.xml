@@ -7,18 +7,18 @@
     <parent>
         <groupId>com.trionesdev.springboot</groupId>
         <artifactId>spring-boot</artifactId>
-        <version>3.0.3-SNAPSHOT</version>
+        <version>3.0.4-SNAPSHOT</version>
     </parent>
 
     <artifactId>starters</artifactId>
     <name>Triones:SpringBoot:Starters</name>
     <modules>
         <module>spring-boot-starter</module>
-        <module>mybatis-plus-spring-boot-starter</module>
-        <module>security-spring-boot-starter</module>
-        <module>openfeign-spring-boot-starter</module>
-        <module>security-oauth2-spring-boot-starter</module>
-        <module>oauth2-authorization-server-spring-boot-starter</module>
+        <module>spring-boot-starter-mybatis-plus</module>
+        <module>spring-boot-starter-security</module>
+        <module>spring-boot-starter-openfeign</module>
+        <module>spring-boot-starter-security-oauth2</module>
+        <module>spring-boot-starter-oauth2-authorization-server</module>
     </modules>
 
     <properties>
