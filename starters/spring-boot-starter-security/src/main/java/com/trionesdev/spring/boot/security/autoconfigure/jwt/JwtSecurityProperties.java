@@ -20,7 +20,7 @@ import java.util.List;
 @NoArgsConstructor
 @ConfigurationProperties("triones.security.jwt")
 public class JwtSecurityProperties {
-    private Algorithm algorithm = Algorithm.RS256; // 签名算法
+    private Algorithm algorithm = Algorithm.HS256; // 签名算法
     private String secret;
     private int expiration = 30 * 60;
     /**
